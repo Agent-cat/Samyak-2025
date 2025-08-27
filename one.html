@@ -1,0 +1,35 @@
+<button id="scan">Scan NFC</button>
+<div id="output"></div>
+
+<script>
+  const scanButton = document.getElementById("scan");
+  const output = document.getElementById("output");
+
+  scanButton.addEventListener("click", async () => {
+    if ("NDEFReader" in window) {
+      try {
+        const ndef = new NDEFReader();
+        await ndef.scan();
+        output.textContent = "Scan started, bring NFC tag closer...";
+
+        ndef.onreading = event => {
+          const decoder = new TextDecoder();
+          for (const record of event.message.records) {
+            output.textContent = `NFC Data: ${decoder.decode(record.data)}`;
+            
+           
+            fetch("/nfc-data", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ data: decoder.decode(record.data) })
+            });
+          }
+        };
+      } catch (error) {
+        output.textContent = "Error: " + error;
+      }
+    } else {
+      output.textContent = "Web NFC not supported on this device/browser.";
+    }
+  });
+</script>
