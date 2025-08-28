@@ -1,11 +1,8 @@
 import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/all";
-import { TiLocationArrow } from "react-icons/ti";
+
 import { useEffect, useRef, useState } from "react";
-
-import Button from "./Button";
-
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -19,9 +16,6 @@ const Landing = () => {
   const totalVideos = 1;
   const nextVdRef = useRef(null);
 
-  const handleVideoLoad = () => {
-    setLoadedVideos((prev) => prev + 1);
-  };
 
   useEffect(() => {
     if (loadedVideos === totalVideos - 1) {
@@ -139,11 +133,10 @@ const Landing = () => {
             onLoadedData={handleVideoLoad}
           /> */}
         </div>
-       
+
         <h1 className="special-font  text-white hero-heading absolute bottom-5 right-5 z-40 ">
           S<b>A</b>MYAK
         </h1>
-    
 
         <div className="absolute left-0 top-0 z-40 size-full">
           <div className="mt-24 px-5 sm:px-10">
@@ -172,4 +165,4 @@ const Landing = () => {
   );
 };
 
-export default Landing ;
+export default Landing;

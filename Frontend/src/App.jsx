@@ -10,6 +10,7 @@ import { MotionConfig } from "framer-motion";
 import TargetCursor from "./Components/Homepage/TargetCursor";
 
 
+
 const App = () => {
   const [loading, setLoading] = useState(true);
   const location = useLocation();
@@ -38,6 +39,7 @@ const App = () => {
           <Loading />
         ) : (
           <div className="select-none">
+   
             <Navbar />
             <NRoutes />
             <Footer />
