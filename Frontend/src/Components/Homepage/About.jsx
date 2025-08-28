@@ -28,7 +28,9 @@ const About = () => {
 
   return (
     <div id="about" className="min-h-screen bg-black w-screen">
+      
       <div className="relative mb-8 mt-36 flex flex-col items-center gap-5">
+        
         {/* <ScrollVelocity
   texts={['SAMYAK']} 
   velocity={100} 
@@ -42,7 +44,7 @@ const About = () => {
         <AnimatedTitle
           title="A Nati<b>o<b/>nal Level  <br /> Techno Management Fest "
           containerClass="mt-5 !text-white text-center"
-        />
+        />       
 
         <div className="about-subtext">
           <p className="text-white" >KL University's 2025 techno-management fest</p>
@@ -55,7 +57,7 @@ const About = () => {
       <div className="h-dvh w-screen" id="clip">
         <div className="mask-clip-path about-image">
          <img
-            src="img/about.webp"
+            src="https://i.ytimg.com/vi/l6hDFAt8i9o/maxresdefault.jpg"
             alt="Background"
             className="absolute left-0 top-0 size-full object-cover"
           />
