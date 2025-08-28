@@ -19,7 +19,7 @@ const Navbar = () => {
         onClick={() => setIsProfileOpen(!isProfileOpen)}
         className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
       >
-        <div className="w-10 h-10 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center shadow-lg text-white font-bold">
+        <div className="w-10 h-10 rounded-full text-white font-bold">
           {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
         </div>
         <span className="font-medium">{user?.fullName || "User"}</span>
@@ -57,7 +57,7 @@ const Navbar = () => {
           <div className="px-4 py-3">
             <button
               onClick={handleLogout}
-              className="w-full bg-gradient-to-r from-purple-500 to-violet-500 text-white py-2.5 rounded-lg font-medium hover:from-purple-600 hover:to-violet-600 transition-all duration-300 flex items-center justify-center gap-2"
+              className="w-full bg-black text-white py-2.5 rounded-lg font-medium  hover:text-black hover:bg-white transition-all duration-300 flex items-center justify-center gap-2"
             >
               <span>Logout</span>
             </button>
@@ -70,7 +70,7 @@ const Navbar = () => {
   const MobileProfile = () => (
     <div className="border-t border-white/10 pt-6 mt-6">
       <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center text-white shadow-lg font-bold">
+        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg font-bold">
           {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
         </div>
         <div>
@@ -80,7 +80,7 @@ const Navbar = () => {
       </div>
       <button
         onClick={handleLogout}
-        className="w-full bg-gradient-to-r from-purple-500 to-violet-500 text-white py-3 rounded-lg font-medium hover:from-purple-600 hover:to-violet-600 transition-all duration-300 flex items-center justify-center gap-2"
+        className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-white hover:text-white transition-all duration-300 flex items-center justify-center gap-2"
       >
         <span>Logout</span>
       </button>
@@ -252,8 +252,8 @@ const Navbar = () => {
                   clsx(
                     "menu-item px-6 py-4 rounded-xl transition-all duration-300 ease-in-out text-2xl w-full text-center font-semibold",
                     {
-                      "bg-gradient-to-r from-purple-500 to-pink-500 text-white shadow-lg": isActive,
-                      "text-white hover:bg-white/10": !isActive,
+                      "bg-gradient-to-r  text-white shadow-lg": isActive,
+                      "text-black bg-white hover:bg-white/10": !isActive,
                     }
                   )
                 }
