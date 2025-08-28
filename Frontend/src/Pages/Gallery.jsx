@@ -1,6 +1,6 @@
 const Gallery = () => {
   return (
-    <div className="w-full flex items-center justify-center font-bold h-screen text-9xl text-white bg-black">
+    <div className="w-full flex overflow-hidden items-center justify-center font-bold h-screen md:text-xl text-9xl text-white bg-black">
       Under construction
     </div>
   )
