@@ -58,6 +58,7 @@ export const BentoCard = ({ src, title, description, isComingSoon }) => {
 
   return (
     <div className="relative hover:bg-red-500 cursot-target size-full">
+      
       <video
         src={src}
         loop
@@ -100,15 +101,14 @@ export const BentoCard = ({ src, title, description, isComingSoon }) => {
 
 const Features = () => (
   <section className="bg-black pb-52">
+    
     <div className="container mx-auto px-3 md:px-10">
       <div className="px-5 py-32">
         <p className="font-circular-web text-lg text-blue-50">
-          Into the Metagame Layer
+          Story of SAMYAK
         </p>
         <p className="max-w-md font-circular-web text-lg text-blue-50 opacity-50">
-          Immerse yourself in a rich and ever-expanding universe where a vibrant
-          array of products converge into an interconnected overlay experience
-          on your world.
+          ....
         </p>
       </div>
 
@@ -118,10 +118,10 @@ const Features = () => (
           src=""
           title={
             <>
-              radia<b>n</b>t
+              2024
             </>
           }
-          description="A cross-platform metagame app, turning your activities across Web2 and Web3 games into a rewarding adventure."
+          description="SAMYAK 2024"
           isComingSoon
         />
       </BentoTilt>
@@ -132,10 +132,10 @@ const Features = () => (
             src=""
             title={
               <>
-                zig<b>m</b>a
+                2023
               </>
             }
-            description="An anime and gaming-inspired NFT collection - the IP primed for expansion."
+            description="..."
             isComingSoon
           />
         </BentoTilt>
@@ -145,10 +145,10 @@ const Features = () => (
             src=""
             title={
               <>
-                n<b>e</b>xus
+               2022
               </>
             }
-            description="A gamified social hub, adding a new dimension of play to social interaction for Web3 communities."
+            description="..."
             isComingSoon
           />
         </BentoTilt>
@@ -158,36 +158,15 @@ const Features = () => (
             src=""
             title={
               <>
-                az<b>u</b>l
+               2021
               </>
             }
-            description="A cross-world AI Agent - elevating your gameplay to be more fun and productive."
+            description="..."
             isComingSoon
           />
         </BentoTilt>
 
-        <BentoTilt className="bento-tilt_2">
-          <div className="flex size-full flex-col justify-between bg-violet-300 p-5">
-            <h1 className="bento-title special-font max-w-64 text-black">
-              M<b>o</b>re co<b>m</b>ing s<b>o</b>on.
-            </h1>
-
-            <TiLocationArrow className="m-5 scale-[5] self-end" />
-          </div>
-        </BentoTilt>
-
-         <BentoTilt className="bento-tilt_1 cursor-target me-14 md:col-span-1 md:me-0">
-          <BentoCard
-            src=""
-            title={
-              <>
-                az<b>u</b>l
-              </>
-            }
-            description="A cross-world AI Agent - elevating your gameplay to be more fun and productive."
-            isComingSoon
-          />
-        </BentoTilt>
+        
       </div>
     </div>
   </section>

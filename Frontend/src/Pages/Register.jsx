@@ -1,15 +1,14 @@
 import React, { useState } from "react";
-import { motion } from "framer-motion";
-import intro3 from "../assets/intro3.mp4";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { setToken, setUser } from "../utils/auth";
 import ErrorPopup from "../Components/ErrorPopup";
 import GenericPopup from "../Components/GenericPopup";
 
 const Register = () => {
-
   const url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -25,7 +24,6 @@ const Register = () => {
     otherCountryName: "",
     image: null,
   });
-  const [isVideoLoaded, setIsVideoLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
@@ -67,10 +65,6 @@ const Register = () => {
 
   const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
 
-  const handleVideoLoad = () => {
-    setIsVideoLoaded(true);
-  };
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
@@ -103,7 +97,6 @@ const Register = () => {
       setError(null);
       setOtpError(null);
 
-      // Validate email format
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
         throw new Error('Please enter a valid email address');
@@ -180,29 +173,48 @@ const Register = () => {
     }
   };
 
+  const handleNextStep = (e) => {
+    e.preventDefault();
+    setError(null);
+
+    if (step === 1) {
+      if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword || !formData.phoneNumber) {
+        setError("Please fill in all required fields.");
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
+      if (!isEmailVerified) {
+        setError("Please verify your email first.");
+        return;
+      }
+      if (formData.college === "kluniversity" && !formData.email.endsWith("@kluniversity.in")) {
+        setError("Please use your KL University email address.");
+        return;
+      }
+    } else if (step === 2) {
+      if (!formData.collegeId || (formData.college === "other" && !formData.otherCollegeName)) {
+        setError("Please provide all college details.");
+        return;
+      }
+    }
+
+    setStep(step + 1);
+  };
+
+  const handlePrevStep = () => {
+    setStep(step - 1);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!isEmailVerified) {
-      setError("Please verify your email first");
-      return;
-    }
 
     setIsLoading(true);
     setError(null);
 
     try {
-      // Validate password match
-      if (formData.password !== formData.confirmPassword) {
-        throw new Error("Passwords do not match");
-      }
-
-      // Validate KL University email for KL students
-      if (formData.college === "kluniversity" && !formData.email.endsWith("@kluniversity.in")) {
-        throw new Error("Please use your KL University email address");
-      }
-
-      // For KL University students, proceed with direct registration
       if (formData.college === "kluniversity") {
         const response = await fetch(
           `${url}/api/users/register`,
@@ -233,7 +245,6 @@ const Register = () => {
         });
         navigate("/");
       } else {
-        // For other college students, proceed to payment page
         navigate("/payment", { state: { formData } });
       }
     } catch (error) {
@@ -244,42 +255,20 @@ const Register = () => {
     }
   };
 
-  return (
-    <>
-      {error && <ErrorPopup message={error} onClose={() => setError(null)} />}
-      {showPopup && <GenericPopup message={error} onClose={() => setShowPopup(false)} />}
-      <div className="min-h-screen relative flex items-center justify-center px-4 py-8">
-        {!isVideoLoaded && (
-          <div className="absolute inset-0 z-50 flex items-center justify-center bg-black">
-            <div className="text-white text-2xl">Loading...</div>
-          </div>
-        )}
-
-        <video
-          autoPlay
-          loop
-          muted
-          onLoadedData={handleVideoLoad}
-          className="absolute top-0 left-0 w-full h-full object-cover z-0"
-        >
-          <source src={intro3} type="video/mp4" />
-          Your browser does not support the video tag.
-        </video>
-
-        <div className="absolute top-0 left-0 w-full h-full bg-black/50 z-10"></div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: isVideoLoaded ? 1 : 0, y: isVideoLoaded ? 0 : 20 }}
-          transition={{ duration: 0.5 }}
-          className="register-container bg-white/10 p-8 rounded-lg backdrop-blur-sm w-full max-w-md relative z-20"
-        >
-          <h2 className="text-3xl font-saint-carell text-white text-center mb-8">
-            Register
-          </h2>
-          <form onSubmit={handleSubmit} className="space-y-6">
+  const renderStep = () => {
+    switch (step) {
+      case 1:
+        return (
+          <motion.div
+            key="step1"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
             <div>
-              <label htmlFor="fullName" className="block text-white mb-2">
+              <label htmlFor="fullName" className="block text-white mb-2 font-mono">
                 Full Name
               </label>
               <input
@@ -288,13 +277,13 @@ const Register = () => {
                 name="fullName"
                 value={formData.fullName}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                 required
                 disabled={isLoading}
               />
             </div>
             <div>
-              <label htmlFor="email" className="block text-white mb-2">
+              <label htmlFor="email" className="block text-white mb-2 font-mono">
                 Email
               </label>
               <input
@@ -303,14 +292,12 @@ const Register = () => {
                 name="email"
                 value={formData.email}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                 required
-                disabled={isLoading}
+                disabled={isLoading || isEmailVerified}
               />
-              <p className="text-sm text-white/80 mt-1">
-                Note:<br />
-                1.Kl university students should use their official university Email <br />
-                2. Other college students should select their college before filling the email address
+              <p className="text-sm text-white/80 mt-1 font-sans">
+                Note: KL University students should use their official university Email.
               </p>
             </div>
             {!isEmailVerified && (
@@ -318,20 +305,17 @@ const Register = () => {
                 <button
                   type="button"
                   onClick={handleSendOTP}
-                  disabled={isLoading || !formData.email}
-                  className={`px-4 py-2 text-sm rounded bg-purple-500 text-white hover:bg-purple-600 transition-colors ${isLoading || !formData.email ? 'opacity-50 cursor-not-allowed' : ''
+                  disabled={isLoading || !formData.email || isEmailVerified}
+                  className={`px-4 py-2 text-sm rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${isLoading || !formData.email || isEmailVerified ? 'opacity-50 cursor-not-allowed' : ''
                     }`}
                 >
                   {isLoading ? 'Sending...' : 'Verify Email'}
                 </button>
-                {isEmailVerified && (
-                  <span className="text-green-500 text-sm">✓ Verified</span>
-                )}
               </div>
             )}
             {showOTPInput && (
               <div className="mt-4">
-                <label htmlFor="otp" className="block text-white mb-2">
+                <label htmlFor="otp" className="block text-white mb-2 font-mono">
                   Enter OTP
                 </label>
                 <div className="flex gap-2">
@@ -340,27 +324,31 @@ const Register = () => {
                     id="otp"
                     value={otp}
                     onChange={(e) => setOtp(e.target.value)}
-                    className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                    className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                     placeholder="Enter 6-digit OTP"
                     maxLength="6"
+                    disabled={isLoading}
                   />
                   <button
                     type="button"
                     onClick={handleVerifyOTP}
                     disabled={isLoading || otp.length !== 6}
-                    className={`px-4 py-2 rounded bg-purple-500 text-white hover:bg-purple-600 transition-colors ${isLoading || otp.length !== 6 ? 'opacity-50 cursor-not-allowed' : ''
+                    className={`px-4 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${isLoading || otp.length !== 6 ? 'opacity-50 cursor-not-allowed' : ''
                       }`}
                   >
                     {isLoading ? 'Verifying...' : 'Verify'}
                   </button>
                 </div>
                 {otpError && (
-                  <p className="text-red-500 text-sm mt-1">{otpError}</p>
+                  <p className="text-red-500 text-sm mt-1 font-sans">{otpError}</p>
                 )}
               </div>
             )}
+            {isEmailVerified && (
+              <span className="text-green-500 text-sm font-sans">✓ Email Verified</span>
+            )}
             <div>
-              <label htmlFor="password" className="block text-white mb-2">
+              <label htmlFor="password" className="block text-white mb-2 font-mono">
                 Password
               </label>
               <input
@@ -369,13 +357,13 @@ const Register = () => {
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                 required
                 disabled={isLoading}
               />
             </div>
             <div>
-              <label htmlFor="confirmPassword" className="block text-white mb-2">
+              <label htmlFor="confirmPassword" className="block text-white mb-2 font-mono">
                 Confirm Password
               </label>
               <input
@@ -384,13 +372,13 @@ const Register = () => {
                 name="confirmPassword"
                 value={formData.confirmPassword}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                 required
                 disabled={isLoading}
               />
             </div>
             <div>
-              <label htmlFor="phoneNumber" className="block text-white mb-2">
+              <label htmlFor="phoneNumber" className="block text-white mb-2 font-mono">
                 Phone Number
               </label>
               <input
@@ -399,15 +387,76 @@ const Register = () => {
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                 required
                 pattern="^\+?[\d\s-]{10,15}$"
                 placeholder="Enter your phone number"
                 disabled={isLoading}
               />
             </div>
+            <button
+              type="button"
+              onClick={handleNextStep}
+              disabled={isLoading || !isEmailVerified}
+              className={`w-full bg-white/20 text-white p-3 rounded-lg transition-all duration-300 font-mono ${isLoading || !isEmailVerified ? "opacity-50 cursor-not-allowed" : "hover:bg-white/30"
+                }`}
+            >
+              Next
+            </button>
+          </motion.div>
+        );
+      case 2:
+        return (
+          <motion.div
+            key="step2"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
             <div>
-              <label htmlFor="collegeId" className="block text-white mb-2">
+              <label htmlFor="college" className="block text-white mb-2 font-mono">
+                College
+              </label>
+              <select
+                id="college"
+                name="college"
+                value={formData.college}
+                onChange={handleCollegeChange}
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+                required
+                disabled={isLoading}
+              >
+                <option value="kluniversity">KL University</option>
+                <option value="other">Other College</option>
+              </select>
+              {formData.college === "other" && (
+                <p className="mt-2 text-sm text-white font-sans">
+                  Note: Non-KL University students are required to pay ₹310 registration fee.
+                </p>
+              )}
+            </div>
+            {formData.college === "other" && (
+              <div>
+                <label htmlFor="otherCollegeName" className="block text-white mb-2 font-mono">
+                  College Name
+                </label>
+                <input
+                  type="text"
+                  id="otherCollegeName"
+                  name="otherCollegeName"
+                  value={formData.otherCollegeName}
+                  onChange={handleChange}
+                  placeholder="Enter your college name"
+                  className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+            <div>
+              <label htmlFor="collegeId" className="block text-white mb-2 font-mono">
                 College ID
               </label>
               <input
@@ -416,53 +465,43 @@ const Register = () => {
                 name="collegeId"
                 value={formData.collegeId}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                 required
                 disabled={isLoading}
               />
             </div>
-
-
-            <div>
-              <label htmlFor="college" className="block text-white mb-2">
-                College
-              </label>
-              <select
-                id="college"
-                name="college"
-                value={formData.college}
-                onChange={handleCollegeChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
-                required
-                disabled={isLoading}
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono"
               >
-                <option value="kluniversity">KL University</option>
-                <option value="other">Other College</option>
-              </select>
-              {formData.college === "other" && (
-                <>
-                  <input
-                    type="text"
-                    id="otherCollegeName"
-                    name="otherCollegeName"
-                    value={formData.otherCollegeName}
-                    onChange={handleChange}
-                    placeholder="Enter your college name"
-                    className="w-full px-4 py-2 mt-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
-                    required
-                    disabled={isLoading}
-                  />
-                  <p className="mt-2 text-sm text-white">
-                    Note: Non-KL University students are required to pay ₹310
-                    registration fee
-                  </p>
-                </>
-              )}
+                Back
+              </button>
+              <button
+                type="button"
+                onClick={handleNextStep}
+                disabled={isLoading}
+                className={`px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${isLoading ? "opacity-50 cursor-not-allowed" : ""
+                  }`}
+              >
+                Next
+              </button>
             </div>
-
-
+          </motion.div>
+        );
+      case 3:
+        return (
+          <motion.div
+            key="step3"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
             <div>
-              <label htmlFor="country" className="block text-white mb-2">
+              <label htmlFor="country" className="block text-white mb-2 font-mono">
                 Country
               </label>
               <select
@@ -470,7 +509,7 @@ const Register = () => {
                 name="country"
                 value={formData.country}
                 onChange={handleCountryChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                 required
                 disabled={isLoading}
               >
@@ -485,16 +524,15 @@ const Register = () => {
                   value={formData.otherCountryName}
                   onChange={handleChange}
                   placeholder="Enter your country name"
-                  className="w-full px-4 py-2 mt-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                  className="w-full px-4 py-2 mt-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                   required
                   disabled={isLoading}
                 />
               )}
             </div>
-
             {formData.country === "India" && (
               <div>
-                <label htmlFor="state" className="block text-white mb-2">
+                <label htmlFor="state" className="block text-white mb-2 font-mono">
                   State
                 </label>
                 <select
@@ -502,7 +540,7 @@ const Register = () => {
                   name="state"
                   value={formData.state}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                  className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                   required
                   disabled={isLoading}
                 >
@@ -515,9 +553,8 @@ const Register = () => {
                 </select>
               </div>
             )}
-
             <div>
-              <label htmlFor="address" className="block text-white mb-2">
+              <label htmlFor="address" className="block text-white mb-2 font-mono">
                 Address
               </label>
               <textarea
@@ -525,21 +562,98 @@ const Register = () => {
                 name="address"
                 value={formData.address}
                 onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white"
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
                 required
                 disabled={isLoading}
                 rows="3"
               />
             </div>
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading}
+                className={`w-full bg-white/20 text-white p-3 rounded-lg transition-all duration-300 font-mono ${isLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-white/30"
+                  }`}
+              >
+                {isLoading ? "Registering..." : "Register"}
+              </button>
+            </div>
+          </motion.div>
+        );
+      default:
+        return null;
+    }
+  };
 
-            <button
-              type="submit"
-              disabled={isLoading}
-              className={`w-full bg-purple-500 text-white p-3 rounded-lg transition-all duration-300 ${isLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-purple-600"
-                }`}
-            >
-              {isLoading ? "Registering..." : "Register"}
-            </button>
+  return (
+    <>
+      {error && <ErrorPopup message={error} onClose={() => setError(null)} />}
+      {showPopup && (
+        <GenericPopup message={error} onClose={() => setShowPopup(false)} />
+      )}
+      <div className="min-h-screen bg-black flex items-center justify-center px-4 py-8 relative">
+        <div className="absolute inset-0 z-0 overflow-hidden">
+          <motion.div
+            className="absolute top-1/4 left-1/4 w-96 h-96 bg-gray-800 rounded-full mix-blend-lighten filter blur-3xl opacity-30 animate-pulse"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 10, ease: "easeInOut" }}
+          ></motion.div>
+          <motion.div
+            className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-white/10 rounded-full mix-blend-lighten filter blur-3xl opacity-30 animate-pulse-slow"
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 10, ease: "easeInOut", delay: 2 }}
+          ></motion.div>
+        </div>
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5 }}
+          className="register-container bg-white/5 p-8 rounded-lg backdrop-blur-sm w-full max-w-md relative z-20 shadow-lg border border-white/10"
+        >
+          <h2 className="text-3xl font-saint-carell text-white text-center mb-8 tracking-widest uppercase">
+            Register
+          </h2>
+          <div className="flex justify-center mb-6">
+            <div className="flex items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${step >= 1 ? 'bg-white border-white' : 'bg-transparent border-white/50 text-white/50'
+                  }`}
+              >
+                1
+              </div>
+              <div className="w-16 h-0.5 bg-white/20 mx-2"></div>
+            </div>
+            <div className="flex items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${step >= 2 ? 'bg-white border-white' : 'bg-transparent border-white/50 text-white/50'
+                  }`}
+              >
+                2
+              </div>
+              <div className="w-16 h-0.5 bg-white/20 mx-2"></div>
+            </div>
+            <div className="flex items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${step >= 3 ? 'bg-white border-white' : 'bg-transparent border-white/50 text-white/50'
+                  }`}
+              >
+                3
+              </div>
+            </div>
+          </div>
+          <form onSubmit={step === 3 ? handleSubmit : handleNextStep}>
+            <AnimatePresence mode="wait">
+              {renderStep()}
+            </AnimatePresence>
           </form>
         </motion.div>
       </div>

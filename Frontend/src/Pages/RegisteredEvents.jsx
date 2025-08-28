@@ -4,10 +4,188 @@ import {
   IoLocationSharp,
   IoCalendarClear,
   IoTime,
-  IoChevronDown,
-  IoChevronUp,
-} from "react-icons/io5";
+  IoSearch,
+  IoList,
+  IoGrid,
+} from "react-icons/io5"; // IoChevronDown is not explicitly used in this iteration for expand/collapse
 import { useNavigate } from "react-router-dom";
+
+// --- Helper Components for a Cleaner Structure ---
+
+// Icon Wrapper for consistent styling
+const IconWrapper = ({ children, className }) => (
+  <div className={`text-white ${className}`}>{children}</div>
+);
+
+// Confirmation Modal Component
+const ConfirmationModal = ({ event, onConfirm, onCancel }) => {
+  if (!event) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+    >
+      <motion.div
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+        className="bg-gray-900/50 border border-white/20 p-8 rounded-2xl max-w-md w-full shadow-2xl shadow-gray-800"
+      >
+        <h3 className="text-2xl font-bold text-white mb-4">
+          Confirm Unregistration
+        </h3>
+        <p className="text-gray-300 mb-8">
+          Are you sure you want to unregister from{" "}
+          <strong className="text-white">{event.title}</strong>?
+        </p>
+        <div className="flex gap-4">
+          <button
+            onClick={onConfirm}
+            className="flex-1 bg-red-600 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-red-700 transition-all duration-300"
+          >
+            Unregister
+          </button>
+          <button
+            onClick={onCancel}
+            className="flex-1 bg-gray-700 text-white px-5 py-2.5 rounded-lg font-semibold hover:bg-gray-600 transition-all duration-300"
+          >
+            Cancel
+          </button>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+// Event Card for List View
+const EventCard = ({ event, onUnregister, isExpanded, onExpand }) => (
+  <motion.div
+    layout
+    initial={{ opacity: 0, scale: 0.9 }}
+    animate={{ opacity: 1, scale: 1 }}
+    exit={{ opacity: 0, scale: 0.9 }}
+    transition={{ duration: 0.4, ease: "easeOut" }}
+    className="bg-gray-900/50 border border-white/10 rounded-2xl overflow-hidden shadow-lg hover:border-white/30 transition-all duration-300"
+  >
+    <div className="relative h-48 group">
+      <img
+        src={event.image}
+        alt={event.title}
+        className="w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-110"
+      />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+      <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-sm text-white px-3 py-1 rounded-full text-xs font-semibold">
+        {event.categoryName}
+      </div>
+    </div>
+    <div className="p-5">
+      <h3 className="text-xl font-bold text-white mb-2">{event.title}</h3>
+      <div className="cursor-pointer" onClick={onExpand}>
+        <motion.p
+          animate={{ height: isExpanded ? "auto" : "40px" }} // Limit to 2 lines (~40px) when not expanded
+          transition={{ duration: 0.4, ease: "easeInOut" }}
+          className="text-gray-400 text-sm overflow-hidden mb-4"
+        >
+          {event.details.description}
+        </motion.p>
+      </div>
+      <div className="space-y-3 border-t border-white/10 pt-4">
+        <div className="flex items-center gap-3 text-sm text-gray-300">
+          <IconWrapper>
+            <IoCalendarClear />
+          </IconWrapper>
+          <span>{new Date(event.details.date).toLocaleDateString('en-IN', { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-gray-300">
+          <IconWrapper>
+            <IoTime />
+          </IconWrapper>
+          <span>{event.details.time}</span>
+        </div>
+        <div className="flex items-center gap-3 text-sm text-gray-300">
+          <IconWrapper>
+            <IoLocationSharp />
+          </IconWrapper>
+          <span>{event.details.venue}</span>
+        </div>
+      </div>
+      <button
+        onClick={() => onUnregister(event)}
+        className="w-full mt-5 bg-red-600/20 border border-red-500/50 text-red-300 px-4 py-2 rounded-lg hover:bg-red-600/40 hover:text-white transition duration-300 text-sm font-semibold"
+      >
+        Unregister
+      </button>
+    </div>
+  </motion.div>
+);
+
+// Timeline View Component
+const TimelineView = ({ groupedEvents, onUnregister }) => (
+  <motion.div
+    initial="hidden"
+    animate="visible"
+    variants={{
+      visible: { transition: { staggerChildren: 0.1 } },
+    }}
+    className="max-w-4xl mx-auto"
+  >
+    {Object.entries(groupedEvents)
+      .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
+      .map(([date, eventsOnDate]) => (
+        <motion.div
+          key={date}
+          variants={{
+            hidden: { opacity: 0, y: 20 },
+            visible: { opacity: 1, y: 0 },
+          }}
+          className="relative pl-8 py-6"
+        >
+          <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-white/20"></div>
+          <div className="absolute left-[-9px] top-9 w-5 h-5 bg-white rounded-full border-4 border-black"></div>
+          <h3 className="text-xl font-semibold text-white mb-6">
+            {new Date(date).toLocaleDateString("en-IN", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}
+          </h3>
+          <div className="space-y-4">
+            {eventsOnDate
+              .sort((a, b) => a.details.time.localeCompare(b.details.time))
+              .map((event) => (
+                <motion.div
+                  key={event.eventId}
+                  variants={{
+                    hidden: { opacity: 0, x: -20 },
+                    visible: { opacity: 1, x: 0 },
+                  }}
+                  className="bg-gray-900/50 p-4 rounded-xl border border-white/10 flex flex-col md:flex-row justify-between items-start md:items-center gap-4"
+                >
+                  <div className="flex-1">
+                    <span className="text-xs bg-gray-700 text-white px-2 py-0.5 rounded-full font-medium mb-2 inline-block">
+                      {event.categoryName}
+                    </span>
+                    <h4 className="font-bold text-white">{event.title}</h4>
+                    <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-gray-400 mt-1">
+                      <span className="flex items-center gap-1.5"><IoTime /> {event.details.time}</span>
+                      <span className="flex items-center gap-1.5"><IoLocationSharp /> {event.details.venue}</span>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => onUnregister(event)}
+                    className="bg-red-600/20 border border-red-500/50 text-red-300 px-3 py-1.5 rounded-md hover:bg-red-600/40 hover:text-white transition duration-300 text-xs font-semibold"
+                  >
+                    Unregister
+                  </button>
+                </motion.div>
+              ))}
+          </div>
+        </motion.div>
+      ))}
+  </motion.div>
+);
+
+
+// --- Main RegisteredEvents Component ---
 
 const RegisteredEvents = () => {
   const url = import.meta.env.VITE_API_URL;
@@ -16,109 +194,89 @@ const RegisteredEvents = () => {
   const [error, setError] = useState(null);
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
-  const [viewMode, setViewMode] = useState("list"); // "list" or "timetable"
+  const [viewMode, setViewMode] = useState("list"); // "list" or "timeline"
   const [showConfirmUnregister, setShowConfirmUnregister] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState(null);
   const navigate = useNavigate();
 
-  const fetchRegisteredEvents = async () => {
-    try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        navigate("/login");
-        return;
-      }
-
-      const response = await fetch(`${url}/api/events/registered`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch registered events");
-      }
-
-      const data = await response.json();
-      console.log("Fetched events:", data); // Debug log
-      setEvents(data);
-      setLoading(false);
-    } catch (error) {
-      setError(error.message);
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
+    const fetchRegisteredEvents = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) {
+          navigate("/login");
+          return;
+        }
+        const response = await fetch(`${url}/api/events/registered`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!response.ok) throw new Error("Failed to fetch registered events");
+        const data = await response.json();
+        setEvents(data);
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
     fetchRegisteredEvents();
-  }, []);
+  }, [url, navigate]);
 
-  const filteredEvents = events.filter((event) =>
-    event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    event.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredEvents = useMemo(() =>
+    events.filter(
+      (event) =>
+        event.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        event.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
+    ), [events, searchTerm]
   );
 
-  // Group events by date for timetable view
   const groupedEvents = useMemo(() => {
-    const groups = {};
-    filteredEvents.forEach((event) => {
+    return filteredEvents.reduce((acc, event) => {
       const date = event.details.date;
-      if (!groups[date]) {
-        groups[date] = [];
-      }
-      groups[date].push(event);
-    });
-    return groups;
+      if (!acc[date]) acc[date] = [];
+      acc[date].push(event);
+      return acc;
+    }, {});
   }, [filteredEvents]);
 
-  const handleUnregister = async (event) => {
-    console.log("Unregistering event:", event); // Debug log
+  const handleUnregisterClick = (event) => {
     setSelectedEvent(event);
     setShowConfirmUnregister(true);
   };
 
   const confirmUnregister = async () => {
+    if (!selectedEvent) return;
     try {
-      console.log("Selected event for unregister:", selectedEvent);
       const token = localStorage.getItem("token");
       if (!token) {
         navigate("/login");
         return;
       }
-
       const response = await fetch(
         `${url}/api/events/${selectedEvent.categoryId}/events/${selectedEvent.eventId}/unregister`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        }
+        { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
       );
-
       if (!response.ok) {
         const data = await response.json();
-        setError(data.message);
-        return;
+        throw new Error(data.message || "Unregistration failed");
       }
-
-      // Remove the event from the local state
       setEvents(events.filter((e) => e.eventId !== selectedEvent.eventId));
       setShowConfirmUnregister(false);
       setSelectedEvent(null);
-    } catch (error) {
-      console.error("Unregister error:", error);
-      setError(error.message);
+    } catch (err) {
+      setError(err.message);
+      // Keep the modal open to show the error if desired, or handle it differently
     }
   };
-
+  
+  // Render loading and error states
   if (loading) {
     return (
       <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-          className="w-16 h-16 border-4 border-purple-400 border-t-transparent rounded-full"
+          className="w-16 h-16 border-4 border-white border-t-transparent rounded-full"
         />
       </div>
     );
@@ -139,262 +297,109 @@ const RegisteredEvents = () => {
   }
 
   return (
-    <div className="min-h-screen bg-black text-white p-8">
-      <div className="pt-12"></div>
-      <div className="max-w-6xl mx-auto">
-        {/* Confirmation Modal */}
-        {showConfirmUnregister && selectedEvent && (
-          <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-            <div className="bg-gray-800 p-8 rounded-xl max-w-md w-full mx-4">
-              <h3 className="text-2xl font-bold text-purple-400 mb-4">
-                Confirm Unregistration
-              </h3>
-              <p className="text-gray-300 mb-6">
-                Are you sure you want to unregister from {selectedEvent.title}?
-              </p>
-              <div className="flex gap-4">
-                <button
-                  onClick={confirmUnregister}
-                  className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300"
-                >
-                  Unregister
-                </button>
-                <button
-                  onClick={() => {
-                    setShowConfirmUnregister(false);
-                    setSelectedEvent(null);
-                  }}
-                  className="bg-gray-600 text-white px-4 py-2 rounded-md hover:bg-gray-700 transition duration-300"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
+    <div className="min-h-screen bg-black text-white p-4 sm:p-8 relative">
+      {/* Background grid - subtle, black and white version */}
+      <div className="absolute inset-0 bg-grid-white/5 [mask-image:radial-gradient(ellipse_at_center,transparent_20%,black)]"></div>
+      
+      <div className="pt-20"></div> {/* Spacing for fixed headers/nav */}
+      <div className="max-w-7xl mx-auto relative z-10">
+        <AnimatePresence>
+          {showConfirmUnregister && (
+            <ConfirmationModal
+              event={selectedEvent}
+              onConfirm={confirmUnregister}
+              onCancel={() => setShowConfirmUnregister(false)}
+            />
+          )}
+        </AnimatePresence>
+        
         <motion.h1
           initial={{ y: -20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
-          className="text-4xl font-bold text-purple-400 mb-8 text-center"
+          className="text-4xl sm:text-5xl font-bold text-white mb-10 text-center"
         >
-          Registered Events
+          My Schedule
         </motion.h1>
 
-        <div className="mb-8">
-          <input
-            type="text"
-            placeholder="Search events by title or category..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full max-w-md mx-auto block px-4 py-2 rounded-lg bg-gray-900 text-white border border-gray-700 focus:outline-none focus:border-purple-400"
-          />
-          <div className="flex gap-2">
-            <button
-              onClick={() => setViewMode("list")}
-              className={`px-4 py-2 rounded-lg ${
-                viewMode === "list"
-                  ? "bg-purple-500 text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
-            >
-              List View
-            </button>
-            <button
-              onClick={() => setViewMode("timetable")}
-              className={`px-4 py-2 rounded-lg ${
-                viewMode === "timetable"
-                  ? "bg-purple-500 text-white"
-                  : "bg-gray-200 text-gray-700"
-              }`}
-            >
-              Timetable View
-            </button>
+        {/* Controls Panel */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+          <div className="relative w-full max-w-sm">
+            <IoSearch className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" />
+            <input
+              type="text"
+              placeholder="Search events or categories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full pl-11 pr-4 py-2.5 rounded-lg bg-gray-900/50 text-white border border-white/20 focus:outline-none focus:border-white focus:ring-2 focus:ring-white/50 transition-all"
+            />
+          </div>
+          <div className="flex gap-2 bg-gray-900/50 border border-white/20 p-1 rounded-lg">
+            {["list", "timeline"].map((mode) => (
+              <button
+                key={mode}
+                onClick={() => setViewMode(mode)}
+                className={`relative px-4 py-1.5 text-sm font-semibold rounded-md transition-colors ${
+                  viewMode === mode ? "text-black" : "text-gray-400 hover:text-white"
+                }`}
+              >
+                {viewMode === mode && (
+                  <motion.div
+                    layoutId="viewModeHighlight"
+                    className="absolute inset-0 bg-white rounded-md"
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                )}
+                <span className="relative z-10 capitalize flex items-center gap-2">
+                  {mode === 'list' ? <IoGrid /> : <IoList />}
+                  {mode}
+                </span>
+              </button>
+            ))}
           </div>
         </div>
-
-        {viewMode === "list" ? (
-          // List View
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            <AnimatePresence>
-              {filteredEvents.map((event) => (
-                <motion.div
-                  key={event.eventId}
-                  layout
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.9 }}
-                  whileHover={{ y: -5 }}
-                  className="bg-gray-900 rounded-lg overflow-hidden shadow-lg hover:shadow-purple-400/10 transition-all duration-300"
-                >
-                  <div className="relative h-48 group">
-                    <img
-                      src={event.image}
-                      alt={event.title}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+        
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={viewMode}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            {filteredEvents.length > 0 ? (
+              viewMode === "list" ? (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {filteredEvents.map((event) => (
+                    <EventCard
+                      key={event.eventId}
+                      event={event}
+                      onUnregister={handleUnregisterClick}
+                      isExpanded={expandedEvent === event.eventId}
+                      onExpand={() => setExpandedEvent(expandedEvent === event.eventId ? null : event.eventId)}
                     />
-                    <div className="absolute top-0 left-0 bg-purple-400 text-white px-3 py-1 m-2 rounded-full text-sm">
-                      {event.categoryName}
-                    </div>
-                  </div>
-                  <div className="p-6">
-                    <h3 className="text-xl font-semibold text-purple-400 mb-2">
-                      {event.title}
-                    </h3>
-                    <div
-                      className="cursor-pointer"
-                      onClick={() =>
-                        setExpandedEvent(
-                          expandedEvent === event.eventId ? null : event.eventId
-                        )
-                      }
-                    >
-                      <div className="flex justify-between items-center mb-2">
-                        <p
-                          className={`text-gray-400 ${
-                            expandedEvent === event.eventId
-                              ? ""
-                              : "line-clamp-2"
-                          }`}
-                        >
-                          {event.details.description}
-                        </p>
-                        {expandedEvent === event.eventId ? (
-                          <IoChevronUp className="text-purple-400" />
-                        ) : (
-                          <IoChevronDown className="text-purple-400" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-3 mt-4">
-                      <motion.div
-                        whileHover={{ x: 5 }}
-                        className="flex items-center gap-2 text-sm text-gray-400"
-                      >
-                        <IoLocationSharp className="text-purple-400" />
-                        <span>{event.details.venue}</span>
-                      </motion.div>
-                      <motion.div
-                        whileHover={{ x: 5 }}
-                        className="flex items-center gap-2 text-sm text-gray-400"
-                      >
-                        <IoCalendarClear className="text-purple-400" />
-                        <span>{event.details.date}</span>
-                      </motion.div>
-                      <motion.div
-                        whileHover={{ x: 5 }}
-                        className="flex items-center gap-2 text-sm text-gray-400"
-                      >
-                        <IoTime className="text-purple-400" />
-                        <span>{event.details.time}</span>
-                      </motion.div>
-                      <button
-                        onClick={() => handleUnregister(event)}
-                        className="w-full mt-4 bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300"
-                      >
-                        Unregister
-                      </button>
-                    </div>
-                  </div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
-          </div>
-        ) : (
-          // Timetable View
-          <div className="overflow-x-auto">
-            <table className="w-full bg-gray-900 rounded-lg overflow-hidden">
-              <thead>
-                <tr className="bg-purple-500 text-white">
-                  <th className="px-6 py-3 text-left font-semibold">Date</th>
-                  <th className="px-6 py-3 text-left font-semibold">Time</th>
-                  <th className="px-6 py-3 text-left font-semibold">Event</th>
-                  <th className="px-6 py-3 text-left font-semibold">Category</th>
-                  <th className="px-6 py-3 text-left font-semibold">Venue</th>
-                  <th className="px-6 py-3 text-left font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {Object.entries(groupedEvents)
-                  .sort(([dateA], [dateB]) => new Date(dateA) - new Date(dateB))
-                  .map(([date, events]) => (
-                    <React.Fragment key={date}>
-                      <tr className="bg-purple-900/30">
-                        <td colSpan="6" className="px-6 py-3 text-purple-400 font-semibold">
-                          {new Date(date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </td>
-                      </tr>
-                      {events
-                        .sort((a, b) => {
-                          const timeA = a.details.time.split(':').map(Number);
-                          const timeB = b.details.time.split(':').map(Number);
-                          return timeA[0] * 60 + timeA[1] - (timeB[0] * 60 + timeB[1]);
-                        })
-                        .map((event, index) => (
-                          <motion.tr
-                            key={event.eventId}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                            className="border-b border-gray-800 hover:bg-gray-800/50"
-                          >
-                            <td className="px-6 py-4 text-gray-300">
-                              {event.details.date}
-                            </td>
-                            <td className="px-6 py-4 text-gray-300">
-                              <div className="flex items-center gap-2">
-                                <IoTime className="text-purple-400" />
-                                {event.details.time}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div>
-                                <h4 className="font-semibold text-purple-400">
-                                  {event.title}
-                                </h4>
-                                <p className="text-sm text-gray-400 line-clamp-2 mt-1">
-                                  {event.details.description}
-                                </p>
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <span className="bg-purple-400/20 text-purple-400 px-3 py-1 rounded-full text-sm">
-                                {event.categoryName}
-                              </span>
-                            </td>
-                            <td className="px-6 py-4">
-                              <div className="flex items-center gap-2 text-gray-300">
-                                <IoLocationSharp className="text-purple-400" />
-                                {event.details.venue}
-                              </div>
-                            </td>
-                            <td className="px-6 py-4">
-                              <button
-                                onClick={() => handleUnregister(event)}
-                                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600 transition duration-300 text-sm flex items-center gap-2"
-                              >
-                                <span>Unregister</span>
-                              </button>
-                            </td>
-                          </motion.tr>
-                        ))}
-                    </React.Fragment>
                   ))}
-                {Object.keys(groupedEvents).length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="px-6 py-8 text-center text-gray-400">
-                      No events found for the selected filters
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-        )}
+                </div>
+              ) : (
+                <TimelineView
+                  groupedEvents={groupedEvents}
+                  onUnregister={handleUnregisterClick}
+                />
+              )
+            ) : (
+              <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  className="text-center py-16"
+              >
+                <p className="text-gray-400">
+                  {events.length === 0 
+                    ? "You haven't registered for any events yet."
+                    : "No events match your search."}
+                </p>
+              </motion.div>
+            )}
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

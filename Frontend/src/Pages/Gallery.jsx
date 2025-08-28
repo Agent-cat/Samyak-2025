@@ -1,6 +1,8 @@
 const Gallery = () => {
   return (
-    <div className="w-full h-screen bg-black">Gallery</div>
+    <div className="w-full flex items-center justify-center font-bold h-screen text-9xl text-white bg-black">
+      Under construction
+    </div>
   )
 }
 
