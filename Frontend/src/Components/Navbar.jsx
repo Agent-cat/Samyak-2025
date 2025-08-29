@@ -252,8 +252,8 @@ const Navbar = () => {
                   clsx(
                     "menu-item px-6 py-4 rounded-xl transition-all duration-300 ease-in-out text-2xl w-full text-center font-semibold",
                     {
-                      "bg-gradient-to-r  text-white shadow-lg": isActive,
-                      "text-black bg-white hover:bg-white/10": !isActive,
+                      "bg-gradient-to-r  text-black bg-white shadow-lg": isActive,
+                      "text-white  hover:bg-white/10": !isActive,
                     }
                   )
                 }
