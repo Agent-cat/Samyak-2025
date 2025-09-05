@@ -9,20 +9,9 @@ import Loading from "./Components/Loading";
 import { MotionConfig } from "framer-motion";
 import TargetCursor from "./Components/Homepage/TargetCursor";
 
-
-
 const App = () => {
-  const [loading, setLoading] = useState(true);
   const location = useLocation();
   useLenis();
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 4000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -31,21 +20,13 @@ const App = () => {
   return (
     <MotionConfig reducedMotion="user">
       <div className="relative min-h-screen">
-        <TargetCursor
-        spinDuration={4}
-        hideDefaultCursor={true}
-      />
-        {loading ? (
-          <Loading />
-        ) : (
-          <div className="select-none">
-   
-            <Navbar />
-            <NRoutes />
-            <Footer />
-        
-          </div>
-        )}
+        <TargetCursor spinDuration={4} hideDefaultCursor={true} />
+
+        <div className="select-none">
+          <Navbar />
+          <NRoutes />
+          <Footer />
+        </div>
       </div>
     </MotionConfig>
   );

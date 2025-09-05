@@ -6,7 +6,8 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { NavItems, adminNavItems } from "../Constants/Constants";
 import { getUser, removeToken, removeUser } from "../utils/auth";
 
-const Navbar = () => {
+// Received props for audio state and ref
+const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
   const [user, setUser] = useState(getUser());
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -19,29 +20,29 @@ const Navbar = () => {
         onClick={() => setIsProfileOpen(!isProfileOpen)}
         className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
       >
-        <div className="w-10 h-10 rounded-full text-white font-bold">
+        <div className="h-10 w-10 rounded-full font-bold text-white">
           {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
         </div>
         <span className="font-medium">{user?.fullName || "User"}</span>
       </button>
 
       {isProfileOpen && (
-        <div className="absolute right-0 mt-3 w-72 bg-black/80 backdrop-blur-lg rounded-xl shadow-2xl py-2 z-50 border border-white/10">
-          <div className="px-6 py-4 border-b border-white/10">
+        <div className="absolute right-0 z-50 mt-3 w-72 rounded-xl border border-white/10 bg-black/80 py-2 shadow-2xl backdrop-blur-lg">
+          <div className="border-b border-white/10 px-6 py-4">
             <p className="text-lg font-semibold text-white">{user?.fullName}</p>
             <p className="text-sm text-gray-300">{user?.email}</p>
           </div>
-          <div className="px-6 py-4 border-b border-white/10">
-            <p className="text-sm text-gray-300 flex justify-between">
+          <div className="border-b border-white/10 px-6 py-4">
+            <p className="flex justify-between text-sm text-gray-300">
               <span>College:</span>
               <span className="text-white">{user?.college}</span>
             </p>
-            <p className="text-sm text-gray-300 flex justify-between mt-2">
+            <p className="mt-2 flex justify-between text-sm text-gray-300">
               <span>ID:</span>
               <span className="text-white">{user?.collegeId}</span>
             </p>
             {user?.college !== "kluniversity" && (
-              <p className="text-sm text-gray-300 flex justify-between mt-2">
+              <p className="mt-2 flex justify-between text-sm text-gray-300">
                 <span>Payment Status:</span>
                 <span
                   className={clsx("font-semibold", {
@@ -57,7 +58,7 @@ const Navbar = () => {
           <div className="px-4 py-3">
             <button
               onClick={handleLogout}
-              className="w-full bg-black text-white py-2.5 rounded-lg font-medium  hover:text-black hover:bg-white transition-all duration-300 flex items-center justify-center gap-2"
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-black py-2.5 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
             >
               <span>Logout</span>
             </button>
@@ -68,19 +69,21 @@ const Navbar = () => {
   );
 
   const MobileProfile = () => (
-    <div className="border-t border-white/10 pt-6 mt-6">
-      <div className="flex items-center gap-4 mb-6">
-        <div className="w-12 h-12 rounded-full flex items-center justify-center text-white shadow-lg font-bold">
+    <div className="mt-6 border-t border-white/10 pt-6">
+      <div className="mb-6 flex items-center gap-4">
+        <div className="flex h-12 w-12 items-center justify-center rounded-full font-bold text-white shadow-lg">
           {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
         </div>
         <div>
-          <p className="text-white font-semibold text-lg">{user?.fullName || "User"}</p>
-          <p className="text-gray-300 text-sm">{user?.email}</p>
+          <p className="text-lg font-semibold text-white">
+            {user?.fullName || "User"}
+          </p>
+          <p className="text-sm text-gray-300">{user?.email}</p>
         </div>
       </div>
       <button
         onClick={handleLogout}
-        className="w-full bg-black text-white py-3 rounded-lg font-medium hover:bg-white hover:text-white transition-all duration-300 flex items-center justify-center gap-2"
+        className="flex w-full items-center justify-center gap-2 rounded-lg bg-black py-3 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
       >
         <span>Logout</span>
       </button>
@@ -128,24 +131,22 @@ const Navbar = () => {
     navigate("/login");
   };
 
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const audioElementRef = useRef(null);
   const navContainerRef = useRef(null);
   const { y: currentScrollY } = useWindowScroll();
   const [isNavVisible, setIsNavVisible] = useState(true);
   const [lastScrollY, setLastScrollY] = useState(0);
 
+  // Function to toggle the audio state
   const toggleAudioIndicator = () => {
-    setIsAudioPlaying((prev) => !prev);
-  };
-
-  useEffect(() => {
-    if (isAudioPlaying) {
-      audioElementRef.current.play().catch(() => {});
-    } else {
-      audioElementRef.current.pause();
+    if (audioElementRef.current) {
+      const newAudioState = !isAudioPlaying;
+      setIsAudioPlaying(newAudioState);
+      localStorage.setItem(
+        "audio_preference",
+        newAudioState ? "enabled" : "disabled"
+      );
     }
-  }, [isAudioPlaying]);
+  };
 
   useEffect(() => {
     if (currentScrollY <= 10) {
@@ -165,7 +166,7 @@ const Navbar = () => {
       setIsNavVisible(true);
     }
     setLastScrollY(currentScrollY);
-  }, [currentScrollY]);
+  }, [currentScrollY, lastScrollY]);
 
   useEffect(() => {
     gsap.to(navContainerRef.current, {
@@ -176,27 +177,38 @@ const Navbar = () => {
   }, [isNavVisible]);
 
   return (
-    // FIX: Added a wrapper div with overflow-x-hidden to prevent horizontal scroll
     <div className="overflow-x-hidden">
       <div
         ref={navContainerRef}
-        className="fixed inset-x-0 top-4 z-50 h-16 border-none transition-all duration-700 sm:inset-x-6"
+        className="fixed inset-x-0 top-4 z-50 h-16 transition-all duration-700 sm:inset-x-6"
       >
         <header className="absolute top-1/2 w-full -translate-y-1/2">
           <div className="flex items-center justify-between">
-            <nav className="flex size-full font-bold text-2xl items-center justify-center p-4">
+            <nav className="flex size-full items-center justify-center p-4 text-2xl font-bold">
               <div className="flex h-full items-center">
                 <div className="hidden md:block">
                   {navigationLinks.map((item, index) => (
-                    <NavLink to={item.to} key={index} className="nav-hover-btn px-4 py-2 cursor-target">
+                    <NavLink
+                      to={item.to}
+                      key={index}
+                      className="nav-hover-btn cursor-target px-4 py-2"
+                    >
                       {item.title}
                     </NavLink>
                   ))}
                 </div>
-                <button onClick={toggleAudioIndicator} className="ml-10 flex items-center space-x-0.5">
-                  <audio ref={audioElementRef} className="hidden" src="/audio/loop.mp3" loop />
+                <button
+                  onClick={toggleAudioIndicator}
+                  className="ml-10 flex cursor-pointer items-center space-x-0.5"
+                >
                   {[1, 2, 3, 4].map((bar) => (
-                    <div key={bar} className={clsx("indicator-line", { active: isAudioPlaying })} style={{ animationDelay: `${bar * 0.1}s` }} />
+                    <div
+                      key={bar}
+                      className={clsx("indicator-line", {
+                        active: isAudioPlaying,
+                      })}
+                      style={{ animationDelay: `${bar * 0.1}s` }}
+                    />
                   ))}
                 </button>
               </div>
@@ -204,36 +216,56 @@ const Navbar = () => {
 
             <div className="flex items-center gap-4">
               <div className="hidden lg:block">
-                {user ? <ProfileDropdown /> : (
+                {user ? (
+                  <ProfileDropdown />
+                ) : (
                   <div className="flex gap-4">
-                    <NavLink to="/login" className="bg-white text-black px-6 py-2 rounded-md hover:bg-gray-200 transition-colors font-medium">
+                    <NavLink
+                      to="/login"
+                      className="cursor-target rounded-md bg-white px-6 py-2 font-bold text-black transition-colors hover:bg-gray-200"
+                    >
                       Login
                     </NavLink>
-                    <NavLink to="/register" className="bg-transparent text-white border-2 border-white px-6 py-2 rounded-md hover:bg-white hover:text-black transition-all font-medium">
+                    <NavLink
+                      to="/register"
+                      className="cursor-target rounded-md border-2 border-white bg-transparent mr-4 px-6 py-2 font-bold text-white transition-all hover:text-red-500"
+                    >
                       Register
                     </NavLink>
                   </div>
                 )}
               </div>
-              
+
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="lg:hidden text-white focus:outline-none z-50 relative w-12 h-10 rounded-lg bg-black/30 backdrop-blur-sm border border-white/10 flex items-center justify-center hover:bg-black/50 transition-all duration-300"
+                className="relative z-50 flex h-10 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-white transition-all duration-300 hover:bg-black/50 focus:outline-none lg:hidden"
               >
-                <div className="w-5 h-4 flex flex-col justify-between relative">
-                  <span className={`block h-0.5 bg-white transform transition-all duration-300 rounded-full ${isOpen ? "rotate-45 translate-y-1.5 w-5" : "w-5"}`}></span>
-                  <span className={`block h-0.5 bg-white transition-all duration-300 rounded-full ${isOpen ? "opacity-0 w-5" : "w-4 ml-1"}`}></span>
-                  <span className={`block h-0.5 bg-white transform transition-all duration-300 rounded-full ${isOpen ? "-rotate-45 -translate-y-1.5 w-5" : "w-3 ml-2"}`}></span>
+                <div className="relative flex h-4 w-5 flex-col justify-between">
+                  <span
+                    className={`block h-0.5 rounded-full bg-white transition-all duration-300 ${
+                      isOpen ? "w-5 translate-y-1.5 rotate-45" : "w-5"
+                    }`}
+                  ></span>
+                  <span
+                    className={`block h-0.5 rounded-full bg-white transition-all duration-300 ${
+                      isOpen ? "w-5 opacity-0" : "ml-1 w-4"
+                    }`}
+                  ></span>
+                  <span
+                    className={`block h-0.5 rounded-full bg-white transition-all duration-300 ${
+                      isOpen ? "w-5 -translate-y-1.5 -rotate-45" : "ml-2 w-3"
+                    }`}
+                  ></span>
                 </div>
               </button>
             </div>
           </div>
         </header>
       </div>
-      
+
       <div
         className={clsx(
-          "lg:hidden fixed top-0 right-0 h-full w-full bg-black/70 backdrop-blur-xl transform transition-all duration-500 ease-in-out z-40",
+          "fixed inset-0 right-0 top-0 z-40 h-full w-full transform backdrop-blur-xl transition-all duration-500 ease-in-out lg:hidden",
           {
             "translate-x-0 opacity-100": isOpen,
             "translate-x-full opacity-0": !isOpen,
@@ -241,8 +273,8 @@ const Navbar = () => {
           }
         )}
       >
-        <div className="flex flex-col items-center justify-between p-8 pt-24 w-full h-full">
-          <div className="w-full flex flex-col gap-4">
+        <div className="flex h-full w-full flex-col items-center justify-between p-8 pt-24">
+          <div className="flex w-full flex-col gap-4">
             {navigationLinks.map((link, index) => (
               <NavLink
                 key={link.title}
@@ -250,14 +282,15 @@ const Navbar = () => {
                 onClick={() => setIsOpen(false)}
                 className={({ isActive }) =>
                   clsx(
-                    "menu-item px-6 py-4 rounded-xl transition-all duration-300 ease-in-out text-2xl w-full text-center font-semibold",
+                    "menu-item w-full rounded-xl px-6 py-4 text-center text-2xl font-semibold transition-all duration-300 ease-in-out",
                     {
-                      "bg-gradient-to-r  text-black bg-white shadow-lg": isActive,
-                      "text-white  hover:bg-white/10": !isActive,
+                      "bg-white bg-gradient-to-r text-black shadow-lg":
+                        isActive,
+                      "text-white hover:bg-white/10": !isActive,
                     }
                   )
                 }
-                style={{ '--delay': `${index * 0.1}s` }}
+                style={{ "--delay": `${index * 0.1}s` }}
               >
                 {link.title}
               </NavLink>
@@ -268,11 +301,19 @@ const Navbar = () => {
             {user ? (
               <MobileProfile />
             ) : (
-              <div className="flex flex-col gap-4 w-full mt-4">
-                <NavLink to="/login" onClick={() => setIsOpen(false)} className="bg-white text-black px-6 py-3 rounded-xl hover:bg-gray-200 transition-all font-medium text-center text-lg">
+              <div className="mt-4 flex w-full flex-col gap-4">
+                <NavLink
+                  to="/login"
+                  onClick={() => setIsOpen(false)}
+                  className="cursor-target rounded-xl bg-white px-6 py-3 text-center text-lg font-medium text-black transition-all hover:bg-gray-200"
+                >
                   Login
                 </NavLink>
-                <NavLink to="/register" onClick={() => setIsOpen(false)} className="bg-transparent text-white border-2 border-white px-6 py-3 rounded-xl hover:bg-white hover:text-black transition-all font-medium text-center text-lg">
+                <NavLink
+                  to="/register"
+                  onClick={() => setIsOpen(false)}
+                  className="rounded-xl border-2 border-white bg-transparent px-6 py-3 text-center text-lg font-medium text-white transition-all hover:bg-white hover:text-black"
+                >
                   Register
                 </NavLink>
               </div>
