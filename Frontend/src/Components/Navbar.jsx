@@ -6,7 +6,6 @@ import { NavLink, useNavigate } from "react-router-dom";
 import { NavItems, adminNavItems } from "../Constants/Constants";
 import { getUser, removeToken, removeUser } from "../utils/auth";
 
-// Received props for audio state and ref
 const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
   const [user, setUser] = useState(getUser());
   const [isOpen, setIsOpen] = useState(false);
@@ -184,6 +183,7 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
       >
         <header className="absolute top-1/2 w-full -translate-y-1/2">
           <div className="flex items-center justify-between">
+            <h1 className=" ml-4 text-white font-bold text-2xl">SAMYAK</h1>
             <nav className="flex size-full items-center justify-center p-4 text-2xl font-bold">
               <div className="flex h-full items-center">
                 <div className="hidden md:block">

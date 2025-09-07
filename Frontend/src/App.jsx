@@ -4,8 +4,6 @@ import Navbar from "./Components/Navbar";
 import NRoutes from "./Routes/NRoutes";
 import Footer from "./Components/Footer";
 import { useLenis } from "./hooks/useLenis";
-import Loading from "./Components/Loading";
-
 import { MotionConfig } from "framer-motion";
 import TargetCursor from "./Components/Homepage/TargetCursor";
 

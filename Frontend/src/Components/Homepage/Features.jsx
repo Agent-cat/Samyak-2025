@@ -1,5 +1,6 @@
 import { useState, useRef } from "react";
 import { TiLocationArrow } from "react-icons/ti";
+import samyak from "../../assets/samyak.JPG";
 
 export const BentoTilt = ({ children, className = "cursor-target" }) => {
   const [transformStyle, setTransformStyle] = useState("");
@@ -57,15 +58,14 @@ export const BentoCard = ({ src, title, description, isComingSoon }) => {
   const handleMouseLeave = () => setHoverOpacity(0);
 
   return (
-    <div className="relative hover:bg-red-500 cursot-target size-full">
-      
-      <video
-        src={src}
-        loop
-        muted
-        autoPlay
-        className="absolute left-0 top-0 size-full object-cover object-center"
-      />
+    <div className="relative hover:bg-red-500 cursor-target size-full">
+      {src && (
+        <img
+          src={src}
+          alt={title}
+          className="absolute left-0 top-0 size-full object-cover object-center"
+        />
+      )}
       <div className="relative z-10 flex size-full flex-col justify-between p-5 text-blue-50">
         <div>
           <h1 className="bento-title special-font">{title}</h1>
@@ -101,7 +101,6 @@ export const BentoCard = ({ src, title, description, isComingSoon }) => {
 
 const Features = () => (
   <section className="bg-black pb-52">
-    
     <div className="container mx-auto px-3 md:px-10">
       <div className="px-5 py-32">
         <p className="font-circular-web text-lg text-blue-50">
@@ -113,60 +112,21 @@ const Features = () => (
       </div>
 
       <BentoTilt className="border-hsla cursor-target relative mb-7 h-96 w-full overflow-hidden rounded-md md:h-[65vh]">
-        <BentoCard
-        
-          src=""
-          title={
-            <>
-              2024
-            </>
-          }
-          description="SAMYAK 2024"
-          isComingSoon
-        />
+        <BentoCard src={samyak} title={<>2024</>} description="SAMYAK 2024" />
       </BentoTilt>
 
       <div className="grid h-[135vh] w-full grid-cols-2 grid-rows-3 gap-7">
         <BentoTilt className="bento-tilt_1 cursor-target row-span-1 md:col-span-1 md:row-span-2">
-          <BentoCard
-            src=""
-            title={
-              <>
-                2023
-              </>
-            }
-            description="..."
-            isComingSoon
-          />
+          <BentoCard src="" title={<>2023</>} description="..." isComingSoon />
         </BentoTilt>
 
         <BentoTilt className="bento-tilt_1 cursor-target row-span-1 ms-32 md:col-span-1 md:ms-0">
-          <BentoCard
-            src=""
-            title={
-              <>
-               2022
-              </>
-            }
-            description="..."
-            isComingSoon
-          />
+          <BentoCard src="" title={<>2022</>} description="..." isComingSoon />
         </BentoTilt>
 
         <BentoTilt className="bento-tilt_1 cursor-target me-14 md:col-span-1 md:me-0">
-          <BentoCard
-            src=""
-            title={
-              <>
-               2021
-              </>
-            }
-            description="..."
-            isComingSoon
-          />
+          <BentoCard src="" title={<>2021</>} description="..." isComingSoon />
         </BentoTilt>
-
-        
       </div>
     </div>
   </section>

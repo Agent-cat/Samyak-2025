@@ -9,7 +9,9 @@ const TargetCursor = ({
   const cursorRef = useRef(null);
   const cornersRef = useRef(null);
   const spinTl = useRef(null);
-  const dotRef = useRef(null); 
+  const dotRef = useRef(null);
+  const hoverSoundRef = useRef(null);
+
   const constants = useMemo(
     () => ({
       borderWidth: 3,
@@ -30,11 +32,15 @@ const TargetCursor = ({
   }, []);
 
   useEffect(() => {
+    hoverSoundRef.current = new Audio("/audio/hover.mp3");
+  }, []);
+
+  useEffect(() => {
     if (!cursorRef.current) return;
 
     const originalCursor = document.body.style.cursor;
     if (hideDefaultCursor) {
-      document.body.style.cursor = 'none';
+      document.body.style.cursor = "none";
     }
 
     const cursor = cursorRef.current;
@@ -68,9 +74,11 @@ const TargetCursor = ({
       if (spinTl.current) {
         spinTl.current.kill();
       }
-      spinTl.current = gsap
-        .timeline({ repeat: -1 })
-        .to(cursor, { rotation: "+=360", duration: spinDuration, ease: "none" });
+      spinTl.current = gsap.timeline({ repeat: -1 }).to(cursor, {
+        rotation: "+=360",
+        duration: spinDuration,
+        ease: "none",
+      });
     };
 
     createSpinTimeline();
@@ -80,16 +88,16 @@ const TargetCursor = ({
 
     const scrollHandler = () => {
       if (!activeTarget || !cursorRef.current) return;
-      
+
       const mouseX = gsap.getProperty(cursorRef.current, "x");
       const mouseY = gsap.getProperty(cursorRef.current, "y");
-      
+
       const elementUnderMouse = document.elementFromPoint(mouseX, mouseY);
-      const isStillOverTarget = elementUnderMouse && (
-        elementUnderMouse === activeTarget || 
-        elementUnderMouse.closest(targetSelector) === activeTarget
-      );
-      
+      const isStillOverTarget =
+        elementUnderMouse &&
+        (elementUnderMouse === activeTarget ||
+          elementUnderMouse.closest(targetSelector) === activeTarget);
+
       if (!isStillOverTarget) {
         if (currentLeaveHandler) {
           currentLeaveHandler();
@@ -102,7 +110,6 @@ const TargetCursor = ({
     //---------------------------------------------------------------
     // This code for onclick animation
 
-    window.addEventListener("mousemove", moveHandler);
     const mouseDownHandler = () => {
       if (!dotRef.current) return;
       gsap.to(dotRef.current, { scale: 0.7, duration: 0.3 });
@@ -139,6 +146,11 @@ const TargetCursor = ({
 
       if (activeTarget) {
         cleanupTarget(activeTarget);
+      }
+
+      if (hoverSoundRef.current) {
+        hoverSoundRef.current.currentTime = 0;
+        hoverSoundRef.current.play();
       }
 
       if (resumeTimeout) {
@@ -274,7 +286,11 @@ const TargetCursor = ({
             spinTl.current.kill();
             spinTl.current = gsap
               .timeline({ repeat: -1 })
-              .to(cursorRef.current, { rotation: "+=360", duration: spinDuration, ease: "none" });
+              .to(cursorRef.current, {
+                rotation: "+=360",
+                duration: spinDuration,
+                ease: "none",
+              });
 
             gsap.to(cursorRef.current, {
               rotation: normalizedRotation + 360,
@@ -316,12 +332,14 @@ const TargetCursor = ({
 
   useEffect(() => {
     if (!cursorRef.current || !spinTl.current) return;
-    
+
     if (spinTl.current.isActive()) {
       spinTl.current.kill();
-      spinTl.current = gsap
-        .timeline({ repeat: -1 })
-        .to(cursorRef.current, { rotation: "+=360", duration: spinDuration, ease: "none" });
+      spinTl.current = gsap.timeline({ repeat: -1 }).to(cursorRef.current, {
+        rotation: "+=360",
+        duration: spinDuration,
+        ease: "none",
+      });
     }
   }, [spinDuration]);
 
@@ -329,28 +347,28 @@ const TargetCursor = ({
     <div
       ref={cursorRef}
       className="fixed top-0 hidden md:flex left-0 w-0 h-0 pointer-events-none z-[9999] mix-blend-difference transform -translate-x-1/2 -translate-y-1/2"
-      style={{ willChange: 'transform' }}
+      style={{ willChange: "transform" }}
     >
       <div
         ref={dotRef}
         className="absolute left-1/2 top-1/2 w-1 h-1 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2"
-        style={{ willChange: 'transform' }}
+        style={{ willChange: "transform" }}
       />
       <div
         className="target-cursor-corner absolute left-1/2 top-1/2 w-3 h-3 border-[3px] border-white transform -translate-x-[150%] -translate-y-[150%] border-r-0 border-b-0"
-        style={{ willChange: 'transform' }}
+        style={{ willChange: "transform" }}
       />
       <div
         className="target-cursor-corner absolute left-1/2 top-1/2 w-3 h-3 border-[3px] border-white transform translate-x-1/2 -translate-y-[150%] border-l-0 border-b-0"
-        style={{ willChange: 'transform' }}
+        style={{ willChange: "transform" }}
       />
       <div
         className="target-cursor-corner absolute left-1/2 top-1/2 w-3 h-3 border-[3px] border-white transform translate-x-1/2 translate-y-1/2 border-l-0 border-t-0"
-        style={{ willChange: 'transform' }}
+        style={{ willChange: "transform" }}
       />
       <div
         className="target-cursor-corner absolute left-1/2 top-1/2 w-3 h-3 border-[3px] border-white transform -translate-x-[150%] translate-y-1/2 border-r-0 border-t-0"
-        style={{ willChange: 'transform' }}
+        style={{ willChange: "transform" }}
       />
     </div>
   );

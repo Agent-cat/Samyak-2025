@@ -158,7 +158,7 @@ const Landing = () => {
       )}
 
       {/* The audio element for the landing page */}
-      <audio ref={audioRef} className="hidden" src="/audio/loop.mp3" loop />
+      <audio ref={audioRef} className="hidden" src="/audio/bg.mp3" loop />
 
       <div className="relative h-dvh w-screen overflow-x-hidden">
         {/* ... (rest of your Landing page code) ... */}
