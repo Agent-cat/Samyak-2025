@@ -4,7 +4,6 @@ import { gsap } from "gsap";
 const useMedia = (queries, values, defaultValue) => {
   const get = () =>
     values[queries.findIndex((q) => matchMedia(q).matches)] ?? defaultValue;
-
   const [value, setValue] = useState(get);
 
   useEffect(() => {
@@ -14,7 +13,6 @@ const useMedia = (queries, values, defaultValue) => {
       queries.forEach((q) =>
         matchMedia(q).removeEventListener("change", handler)
       );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [queries]);
 
   return value;
@@ -104,7 +102,9 @@ const Masonry = ({
     }
   };
 
+  // Reset to loading, then mark ready when all images resolve.
   useEffect(() => {
+    setImagesReady(false);
     preloadImages(items.map((i) => i.img)).then(() => setImagesReady(true));
   }, [items]);
 
@@ -167,7 +167,6 @@ const Masonry = ({
     });
 
     hasMounted.current = true;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [grid, imagesReady, stagger, animateFrom, blurToFocus, duration, ease]);
 
   const handleMouseEnter = (id, element) => {
@@ -199,27 +198,45 @@ const Masonry = ({
   };
 
   return (
-    <div ref={containerRef} className="relative w-full h-full">
-      {grid.map((item) => (
+    <div
+      ref={containerRef}
+      className="relative w-full h-full min-h-[200px]"
+      aria-busy={!imagesReady}
+    >
+      {!imagesReady && (
         <div
-          key={item.id}
-          data-key={item.id}
-          className="absolute box-content"
-          style={{ willChange: "transform, width, height, opacity" }}
-          onClick={() => window.open(item.url, "_blank", "noopener")}
-          onMouseEnter={(e) => handleMouseEnter(item.id, e.currentTarget)}
-          onMouseLeave={(e) => handleMouseLeave(item.id, e.currentTarget)}
+          className="absolute inset-0 flex items-center justify-center"
+          role="status"
+          aria-live="polite"
+          style={{ pointerEvents: "none", userSelect: "none" }}
         >
-          <div
-            className="relative w-full h-full bg-cover bg-center rounded-[10px] shadow-[0px_10px_50px_-10px_rgba(0,0,0,0.2)] uppercase text-[10px] leading-[10px]"
-            style={{ backgroundImage: `url(${item.img})` }}
-          >
-            {colorShiftOnHover && (
-              <div className="color-overlay absolute inset-0 rounded-[10px] bg-gradient-to-tr from-pink-500/50 to-sky-500/50 opacity-0 pointer-events-none" />
-            )}
-          </div>
+          <span className="text-sm tracking-wide text-neutral-500">
+            Loading images…
+          </span>
         </div>
-      ))}
+      )}
+
+      {imagesReady &&
+        grid.map((item) => (
+          <div
+            key={item.id}
+            data-key={item.id}
+            className="absolute box-content"
+            style={{ willChange: "transform, width, height, opacity" }}
+            onClick={() => window.open(item.url, "_blank", "noopener")}
+            onMouseEnter={(e) => handleMouseEnter(item.id, e.currentTarget)}
+            onMouseLeave={(e) => handleMouseLeave(item.id, e.currentTarget)}
+          >
+            <div
+              className="relative w-full h-full bg-cover bg-center rounded-[10px] shadow-[0px_10px_50px_-10px_rgba(0,0,0,0.2)] uppercase text-[10px] leading-[10px]"
+              style={{ backgroundImage: `url(${item.img})` }}
+            >
+              {colorShiftOnHover && (
+                <div className="color-overlay absolute inset-0 rounded-[10px] bg-gradient-to-tr from-pink-500/50 to-sky-500/50 opacity-0 pointer-events-none" />
+              )}
+            </div>
+          </div>
+        ))}
     </div>
   );
 };
