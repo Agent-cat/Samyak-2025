@@ -23,7 +23,7 @@ const App = () => {
         <div className="select-none">
           <Navbar />
           <NRoutes />
-          <Footer />
+          {/* <Footer /> */}
         </div>
       </div>
     </MotionConfig>
