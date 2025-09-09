@@ -172,7 +172,7 @@ const Gallery = () => {
           <button
             key={category}
             onClick={() => handleCategoryChange(category)}
-            className={`px-4 py-2 rounded-full font-sans text-sm md:text-base transition-colors duration-300 ${
+            className={`px-4 py-2 rounded-full font-sans text-sm md:text-base cursor-target transition-colors duration-300 ${
               activeCategory === category
                 ? "bg-white text-black"
                 : "bg-gray-800 text-white hover:bg-gray-700"
