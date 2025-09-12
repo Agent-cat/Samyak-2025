@@ -15,6 +15,7 @@ import { getUser } from "../utils/auth";
 import PleaseLogin from "../Pages/PleaseLogin";
 import ForgotPassword from "../Components/ForgotPassword";
 import UserDetails from "../Pages/UserDetails";
+import Team from "../Pages/Team";
 
 const NRoutes = () => {
   const user = getUser();
@@ -24,6 +25,7 @@ const NRoutes = () => {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/gallery" element={<Gallery />} />
+      <Route path="/team" element={<Team />} />
       <Route path="/events" element={<Events />} />
       <Route
         path="/login"
