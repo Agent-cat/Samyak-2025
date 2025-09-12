@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  frontend:
+    build:
+      context: ./Frontend
+      args:
+        VITE_API_URL: http://localhost:5001
+    ports:
+        - "3000:3000"
+    networks:
+      - samyak-network
+    depends_on:
+      - backend
+
+  backend:
+    build: ./Backend
+    ports:
+      - "5001:5001"
+    environment:
+      - MONGODB_URI=mongodb://mongo:27017/samyak
+      - PORT=5001
+      - JWT_SECRET=surabhi2025
+      - FRONTEND_URL=http://localhost:5173
+      - EMAIL_USER=surabhi@kluniversity.in
+      - EMAIL_PASSWORD=$WWaZ@)?Api%6%~
+    networks:
+      - samyak-network
+    depends_on:
+      - mongo
+
+  mongo:
+    image: mongo:latest
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb-data:/data/db
+    networks:
+      - samyak-network
+
+networks:
+  samyak-network:
+    driver: bridge
+    
+volumes:
+  mongodb-data:

@@ -106,8 +106,10 @@ const Features = () => (
         <p className="font-circular-web text-lg text-blue-50">
           Story of SAMYAK
         </p>
-        <p className="max-w-md font-circular-web text-lg text-blue-50 opacity-50">
-          ....
+        <p className="max-w-md pt-5 font-circular-web text-lg text-blue-50 opacity-50">
+          KL University's 2025 techno-management fest features diverse events
+          and workshops, fostering collaboration, enhancing skills, and
+          celebrating a 13-year legacy of student camaraderie.
         </p>
       </div>
 
