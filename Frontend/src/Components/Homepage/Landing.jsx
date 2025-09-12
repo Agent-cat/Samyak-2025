@@ -20,13 +20,13 @@ const AudioPermissionPopup = ({ onEnable, onDisable }) => {
         <div className="mt-6 flex justify-center space-x-4">
           <button
             onClick={onEnable}
-            className="w-28 rounded-lg bg-white px-4 py-2 font-semibold text-black transition-colors hover:bg-gray-200"
+            className="w-28 rounded-lg bg-white px-4 py-2 font-semibold text-black cursor-target transition-colors hover:bg-gray-200"
           >
             Yes
           </button>
           <button
             onClick={onDisable}
-            className="w-28 rounded-lg border border-white/20 px-4 py-2 font-semibold text-white transition-colors hover:bg-white hover:text-black"
+            className="w-28 rounded-lg border cursor-target border-white/20 px-4 py-2 font-semibold text-white transition-colors hover:bg-white hover:text-black"
           >
             No
           </button>
@@ -42,7 +42,6 @@ const Landing = () => {
   const [loading, setLoading] = useState(true);
   const [loadedVideos, setLoadedVideos] = useState(0);
 
-  // New state for the audio popup and audio playback
   const [showAudioPopup, setShowAudioPopup] = useState(true);
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const audioRef = useRef(null);
@@ -51,16 +50,13 @@ const Landing = () => {
   const nextVdRef = useRef(null);
 
   useEffect(() => {
-    // Check localStorage on initial render
     const audioPreference = localStorage.getItem("audio_preference");
     if (audioPreference !== null) {
-      // If a preference exists, set the audio state and hide the popup
       setIsAudioPlaying(audioPreference === "enabled");
       setShowAudioPopup(false);
     }
-  }, []); // Run only once on component mount
+  }, []);
 
-  // Effect to play/pause audio based on state
   useEffect(() => {
     if (audioRef.current) {
       if (isAudioPlaying) {
@@ -77,7 +73,6 @@ const Landing = () => {
     }
   }, [loadedVideos, totalVideos]);
 
-  // Audio control functions that also save to localStorage
   const handleEnableAudio = () => {
     setIsAudioPlaying(true);
     setShowAudioPopup(false);
@@ -140,8 +135,6 @@ const Landing = () => {
     });
   });
 
-  const getVideoSrc = (index) => `videos/hero-${index}.mp4`;
-
   return (
     <>
       <Navbar
@@ -173,21 +166,19 @@ const Landing = () => {
                 onClick={handleMiniVdClick}
                 className="origin-center scale-50 opacity-0 transition-all duration-500 ease-in hover:scale-100 hover:opacity-100"
               >
-                <video
-                  ref={nextVdRef}
-                  src={getVideoSrc((currentIndex % totalVideos) + 1)}
+                {/* <video
+                  src="/img/samyak_1.mp4"
                   loop
                   muted
                   id="current-video"
                   className="size-64 origin-center scale-150 object-cover object-center"
                   // onLoadedData={handleVideoLoad}
-                />
+                /> */}
               </div>
-              {/* </VideoPreview> */}
             </div>
 
             <video
-              src={getVideoSrc(currentIndex)}
+              src="/img/samyak_1.mp4"
               autoPlay
               loop
               muted
