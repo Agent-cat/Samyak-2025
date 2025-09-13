@@ -2,7 +2,7 @@ import clsx from "clsx";
 import gsap from "gsap";
 import { useWindowScroll } from "react-use";
 import { useEffect, useRef, useState } from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { Link, NavLink, useNavigate } from "react-router-dom";
 import { NavItems, adminNavItems } from "../Constants/Constants";
 import { getUser, removeToken, removeUser } from "../utils/auth";
 
@@ -183,7 +183,12 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
       >
         <header className="absolute top-1/2 w-full -translate-y-1/2">
           <div className="flex items-center justify-between">
-            <h1 className=" ml-4 text-white font-bold text-2xl">SAMYAK</h1>
+            <Link to="/" className="flex items-center justify-center">
+              <h1 className=" ml-4 text-white font-bold hidden md:flex md:text-2xl">
+                SAMYAK
+              </h1>
+              <img className="w-20 h-auto" src="/img/samyak.svg" alt="" />
+            </Link>
             <nav className="flex size-full items-center justify-center p-4 text-2xl font-bold">
               <div className="flex h-full items-center">
                 <div className="hidden md:block">

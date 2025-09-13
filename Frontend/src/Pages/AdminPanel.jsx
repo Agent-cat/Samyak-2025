@@ -285,8 +285,9 @@ const EventRegistrations = ({ event, onClose }) => {
     XLSX.utils.book_append_sheet(wb, ws, "Registrations");
 
     // Generate filename with event title and date
-    const fileName = `${event.title}_registrations_${new Date().toISOString().split("T")[0]
-      }.xlsx`;
+    const fileName = `${event.title}_registrations_${
+      new Date().toISOString().split("T")[0]
+    }.xlsx`;
 
     // Save file
     XLSX.writeFile(wb, fileName);
@@ -428,17 +429,16 @@ const EventRegistrations = ({ event, onClose }) => {
   );
 };
 
-
 const getStatusBadgeColor = (status) => {
   switch (status) {
-    case 'pending':
-      return 'bg-yellow-500';
-    case 'approved':
-      return 'bg-green-500';
-    case 'rejected':
-      return 'bg-red-500';
+    case "pending":
+      return "bg-yellow-500";
+    case "approved":
+      return "bg-green-500";
+    case "rejected":
+      return "bg-red-500";
     default:
-      return 'bg-gray-500';
+      return "bg-gray-500";
   }
 };
 
@@ -502,7 +502,8 @@ const AdminPanel = () => {
   const fetchRegistrations = async () => {
     try {
       const response = await fetch(
-        `${url}/api/admin/registrations${filter !== "all" ? `?status=${filter}` : ""
+        `${url}/api/admin/registrations${
+          filter !== "all" ? `?status=${filter}` : ""
         }`,
         {
           headers: {
@@ -521,14 +522,11 @@ const AdminPanel = () => {
 
   const fetchEvents = useCallback(async () => {
     try {
-      const response = await fetch(
-        `${url}/api/events`,
-        {
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await fetch(`${url}/api/events`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to fetch events");
@@ -559,17 +557,14 @@ const AdminPanel = () => {
 
   const handleApproval = async (userId, status) => {
     try {
-      const response = await fetch(
-        `${url}/api/admin/registrations/${userId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({ status }),
-        }
-      );
+      const response = await fetch(`${url}/api/admin/registrations/${userId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ status }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to update registration");
@@ -703,17 +698,14 @@ const AdminPanel = () => {
       console.log("Submitting category:", categoryForm); // Debug log
 
       try {
-        const response = await fetch(
-          `${url}/api/events/category`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify(categoryForm),
-          }
-        );
+        const response = await fetch(`${url}/api/events/category`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(categoryForm),
+        });
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -736,19 +728,16 @@ const AdminPanel = () => {
 
   const handleUpdateCategory = useCallback(async (categoryId, newName) => {
     try {
-      const response = await fetch(
-        `${url}/api/events/category/${categoryId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-          body: JSON.stringify({
-            categoryName: newName,
-          }),
-        }
-      );
+      const response = await fetch(`${url}/api/events/category/${categoryId}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          categoryName: newName,
+        }),
+      });
 
       if (!response.ok) {
         throw new Error("Failed to update category");
@@ -771,15 +760,12 @@ const AdminPanel = () => {
     }
 
     try {
-      const response = await fetch(
-        `${url}/api/events/category/${categoryId}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${localStorage.getItem("token")}`,
-          },
-        }
-      );
+      const response = await fetch(`${url}/api/events/category/${categoryId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
 
       if (!response.ok) {
         throw new Error("Failed to delete category");
@@ -810,11 +796,16 @@ const AdminPanel = () => {
 
   const exportRegistrationsToExcel = async (status) => {
     try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/api/admin/registrations?status=${status}`, {
-        headers: {
-          Authorization: `Bearer ${localStorage.getItem("token")}`,
-        },
-      });
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_API_URL
+        }/api/admin/registrations?status=${status}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error("Failed to fetch registrations");
@@ -830,14 +821,15 @@ const AdminPanel = () => {
         "Payment Status": user.paymentStatus,
         "UTR ID": user.paymentId || "N/A",
         "Payment Screenshot": user.paymentScreenshot || "N/A",
-
       }));
 
       const ws = XLSX.utils.json_to_sheet(exportData);
       const wb = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(wb, ws, "Registrations");
 
-      const fileName = `registrations_${status}_${new Date().toISOString().split("T")[0]}.xlsx`;
+      const fileName = `registrations_${status}_${
+        new Date().toISOString().split("T")[0]
+      }.xlsx`;
       XLSX.writeFile(wb, fileName);
     } catch (error) {
       console.error("Error exporting registrations:", error);
@@ -869,19 +861,21 @@ const AdminPanel = () => {
           <div className="flex flex-wrap gap-3 sm:gap-4 w-full sm:w-auto">
             <button
               onClick={() => setView("registrations")}
-              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${view === "registrations"
-                ? "bg-purple-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-purple-500"
-                }`}
+              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                view === "registrations"
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-purple-500"
+              }`}
             >
               Registrations
             </button>
             <button
               onClick={() => setView("events")}
-              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${view === "events"
-                ? "bg-purple-600 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-purple-500"
-                }`}
+              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                view === "events"
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-purple-500"
+              }`}
             >
               Events
             </button>
@@ -892,28 +886,31 @@ const AdminPanel = () => {
           <div className="flex gap-4 mb-6">
             <button
               onClick={() => setFilter("pending")}
-              className={`px-4 py-2 rounded-lg ${filter === "pending"
-                ? "bg-yellow-500 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-yellow-500"
-                }`}
+              className={`px-4 py-2 rounded-lg ${
+                filter === "pending"
+                  ? "bg-yellow-500 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-yellow-500"
+              }`}
             >
               Pending
             </button>
             <button
               onClick={() => setFilter("approved")}
-              className={`px-4 py-2 rounded-lg ${filter === "approved"
-                ? "bg-green-500 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-green-500"
-                }`}
+              className={`px-4 py-2 rounded-lg ${
+                filter === "approved"
+                  ? "bg-green-500 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-green-500"
+              }`}
             >
               Approved
             </button>
             <button
               onClick={() => setFilter("rejected")}
-              className={`px-4 py-2 rounded-lg ${filter === "rejected"
-                ? "bg-red-500 text-white"
-                : "bg-gray-700 text-gray-300 hover:bg-red-500"
-                }`}
+              className={`px-4 py-2 rounded-lg ${
+                filter === "rejected"
+                  ? "bg-red-500 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-red-500"
+              }`}
             >
               Rejected
             </button>
@@ -1119,7 +1116,6 @@ const AdminPanel = () => {
                         )}
                       </div>
 
-                      {/* Expandable Content */}
                       {expandedEvents.has(event._id) && (
                         <div className="p-4 border-t border-gray-700 bg-gray-750">
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">

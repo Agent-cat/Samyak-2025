@@ -1,9 +1,25 @@
 import Event from "../models/events.model.js";
+import redisClient from "../redisClient.js"; 
+
+
+const CACHE_KEY = "all_events";
+const CACHE_DURATION = 300; 
+
+
+const clearEventsCache = async () => {
+  try {
+    await redisClient.del(CACHE_KEY);
+    console.log("cleared");
+  } catch (error) {
+    console.error("Error clearing events cache:", error);
+  }
+};
 
 export const createEvent = async (req, res) => {
   try {
     const event = new Event(req.body);
     const savedEvent = await event.save();
+    await clearEventsCache(); 
     res.status(201).json(savedEvent);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -12,10 +28,23 @@ export const createEvent = async (req, res) => {
 
 export const getAllEvents = async (req, res) => {
   try {
+    
+    const cachedEvents = await redisClient.get(CACHE_KEY);
+    if (cachedEvents) {
+      console.log("Serving events from Redis cache.");
+      return res.status(200).json(JSON.parse(cachedEvents));
+    }
+
+    
+    console.log("Fetching events from database.");
     const events = await Event.find().populate({
       path: "Events.registeredStudents",
       select: "fullName email college collegeId",
     });
+
+    
+    await redisClient.setex(CACHE_KEY, CACHE_DURATION, JSON.stringify(events));
+
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -50,6 +79,7 @@ export const updateEvent = async (req, res) => {
     if (!updatedEvent) {
       return res.status(404).json({ message: "Event not found" });
     }
+    await clearEventsCache(); 
     res.status(200).json(updatedEvent);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -62,6 +92,7 @@ export const deleteEvent = async (req, res) => {
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
+    await clearEventsCache();
     res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -73,52 +104,58 @@ export const registerForEvent = async (req, res) => {
     const { categoryId, eventId } = req.params;
     const userId = req.user._id;
 
-    // Find the category
+    
     const category = await Event.findById(categoryId);
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    // Find the specific event in the category
+    
     const event = category.Events.find((e) => e._id.toString() === eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // Check if user is already registered
+    
     if (event.registeredStudents.includes(userId)) {
       return res
         .status(400)
         .json({ message: "Already registered for this event" });
     }
 
-    // Check if event has reached participant limit
     if (event.registeredStudents.length >= event.participantLimit) {
       return res
         .status(400)
         .json({ message: "Event has reached maximum participants limit" });
     }
 
-    // Get all categories to check for time conflicts
-    const allCategories = await Event.find();
-    const eventDate = event.details.date;
-    const eventTime = event.details.time;
+ 
+    const registeredEvents = await Event.find({
+      "Events.registeredStudents": userId,
+    });
 
-    // Check for time conflicts with other registered events
-    for (const cat of allCategories) {
-      for (const evt of cat.Events) {
-        if (evt.registeredStudents.includes(userId)) {
-          const evtStart = evt.details.startTime;
-          const evtEnd = evt.details.endTime;
-          if (evt.details.date === eventDate &&
-            ((evtStart < event.details.endTime && evtEnd > event.details.startTime))) {
+
+    const newEventDate = event.details.date;
+    const newEventStart = event.details.startTime;
+    const newEventEnd = event.details.endTime;
+    for (const cat of registeredEvents) {
+      for (const registeredEvent of cat.Events) {
+        if (registeredEvent.registeredStudents.includes(userId)) {
+          const registeredEventDate = registeredEvent.details.date;
+          const registeredEventStart = registeredEvent.details.startTime;
+          const registeredEventEnd = registeredEvent.details.endTime;
+
+          if (
+            registeredEventDate === newEventDate &&
+            (newEventStart < registeredEventEnd && newEventEnd > registeredEventStart)
+          ) {
             return res.status(400).json({
               message: "Time conflict: You are already registered for another event at this time",
               conflictingEvent: {
-                title: evt.title,
-                date: evt.details.date,
-                startTime: evt.details.startTime,
-                endTime: evt.details.endTime
+                title: registeredEvent.title,
+                date: registeredEventDate,
+                startTime: registeredEventStart,
+                endTime: registeredEventEnd,
               }
             });
           }
@@ -126,10 +163,10 @@ export const registerForEvent = async (req, res) => {
       }
     }
 
-    // Add user to registered students
     event.registeredStudents.push(userId);
     await category.save();
 
+    await clearEventsCache(); 
     res.status(200).json({ message: "Successfully registered for event" });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -140,12 +177,10 @@ export const getRegisteredEvents = async (req, res) => {
   try {
     const userId = req.user._id;
 
-    // Find all categories that have events with this user registered
     const categories = await Event.find({
       "Events.registeredStudents": userId,
     });
 
-    // Format the response to include only registered events
     const registeredEvents = categories.flatMap((category) =>
       category.Events.filter((event) =>
         event.registeredStudents.includes(userId)
@@ -162,7 +197,7 @@ export const getRegisteredEvents = async (req, res) => {
       }))
     );
 
-    console.log("Found registered events:", registeredEvents); // Debug log
+    console.log("Found registered events:", registeredEvents);
     res.status(200).json(registeredEvents);
   } catch (error) {
     console.error("Error in getRegisteredEvents:", error);
@@ -175,32 +210,29 @@ export const unregisterFromEvent = async (req, res) => {
     const { categoryId, eventId } = req.params;
     const userId = req.user._id;
 
-    // Find the category
     const category = await Event.findById(categoryId);
     if (!category) {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    // Find the specific event in the category
     const event = category.Events.find((e) => e._id.toString() === eventId);
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
 
-    // Check if user is registered
     if (!event.registeredStudents.includes(userId)) {
       return res
         .status(400)
         .json({ message: "Not registered for this event" });
     }
 
-    // Remove user from registered students
     event.registeredStudents = event.registeredStudents.filter(
       (id) => id.toString() !== userId.toString()
     );
 
     await category.save();
 
+    await clearEventsCache(); // Invalidate cache on unregister
     res.status(200).json({ message: "Successfully unregistered from event" });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -216,7 +248,6 @@ export const createEventInCategory = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
-    // Get max eventId and increment by 1
     const maxEventId = Math.max(...category.Events.map((e) => e.eventId), 0);
     const newEventId = maxEventId + 1;
 
@@ -227,10 +258,11 @@ export const createEventInCategory = async (req, res) => {
       image: req.body.image,
       termsandconditions: req.body.termsandconditions,
       registeredStudents: [],
-      participantLimit: req.body.participantLimit || 100, // Default to 100 if not provided
+      participantLimit: req.body.participantLimit || 100,
     });
 
     await category.save();
+    await clearEventsCache(); // Invalidate cache on create
     res.status(201).json(category);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -256,10 +288,11 @@ export const updateEventInCategory = async (req, res) => {
       details: req.body.details,
       image: req.body.image,
       termsandconditions: req.body.termsandconditions,
-      participantLimit: req.body.participantLimit, // Ensure this is updated
+      participantLimit: req.body.participantLimit,
     });
 
     await category.save();
+    await clearEventsCache(); // Invalidate cache on update
     res.status(200).json(category);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -285,6 +318,7 @@ export const createCategory = async (req, res) => {
     });
 
     const savedCategory = await newCategory.save();
+    await clearEventsCache(); // Invalidate cache on create
     res.status(201).json(savedCategory);
   } catch (error) {
     res.status(400).json({ message: error.message });
@@ -300,11 +334,13 @@ export const deleteCategory = async (req, res) => {
       return res.status(404).json({ message: "Category not found" });
     }
 
+    await clearEventsCache(); // Invalidate cache on delete
     res.status(200).json({ message: "Category deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
 };
+
 export const deleteEventInCategory = async (req, res) => {
   try {
     const { categoryId, eventId } = req.params;
@@ -324,6 +360,7 @@ export const deleteEventInCategory = async (req, res) => {
     category.Events.splice(eventIndex, 1);
     await category.save();
 
+    await clearEventsCache(); // Invalidate cache on delete
     res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });

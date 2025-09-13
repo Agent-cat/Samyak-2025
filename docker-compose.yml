@@ -5,9 +5,9 @@ services:
     build:
       context: ./Frontend
       args:
-        VITE_API_URL: http://localhost:5001
+        VITE_API_URL: http://backend:5001 
     ports:
-        - "3000:3000"
+      - "3000:3000"
     networks:
       - samyak-network
     depends_on:
@@ -18,16 +18,19 @@ services:
     ports:
       - "5001:5001"
     environment:
-      - MONGODB_URI=mongodb://mongo:27017/samyak
+      - MONGODB_URI=mongodb+srv://admin:vishnu%402005@cluster0.cnfu0ri.mongodb.net/surabhi
       - PORT=5001
       - JWT_SECRET=surabhi2025
       - FRONTEND_URL=http://localhost:5173
       - EMAIL_USER=surabhi@kluniversity.in
       - EMAIL_PASSWORD=$WWaZ@)?Api%6%~
+      - REDIS_HOST=redis  
+      - REDIS_PORT=6379   
     networks:
       - samyak-network
     depends_on:
       - mongo
+      - redis 
 
   mongo:
     image: mongo:latest
@@ -37,10 +40,20 @@ services:
       - mongodb-data:/data/db
     networks:
       - samyak-network
+  
+  redis: 
+    image: redis:latest
+    ports:
+      - "6379:6379"
+    networks:
+      - samyak-network
+    volumes:
+      - redis-data:/data 
 
 networks:
   samyak-network:
     driver: bridge
-    
+
 volumes:
   mongodb-data:
+  redis-data: 

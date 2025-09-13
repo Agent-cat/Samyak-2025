@@ -115,7 +115,7 @@ const Features = () => (
 
       <BentoTilt className="border-hsla cursor-target relative mb-7 h-96 w-full overflow-hidden rounded-md md:h-[65vh]">
         <BentoCard
-          src="/img/2024.jpeg"
+          src="/img/shanaya.JPG"
           title={<>2024</>}
           description="SAMYAK 2024"
         />
@@ -126,17 +126,21 @@ const Features = () => (
           <BentoCard
             src="/img/2023.jpeg"
             title={<>2023</>}
-            description="..."
+            description=" SAMYAK 2023"
             isComingSoon
           />
         </BentoTilt>
 
         <BentoTilt className="bento-tilt_1 cursor-target row-span-1 ms-32 md:col-span-1 md:ms-0">
-          <BentoCard src="/img/2022.jpeg" title={<>2022</>} description="..." />
+          <BentoCard
+            src="/img/Brahmi.jpg"
+            title={<>2022</>}
+            description="SAMYAK 2022"
+          />
         </BentoTilt>
 
         <BentoTilt className="bento-tilt_1 cursor-target me-14 md:col-span-1 md:me-0">
-          <BentoCard src="" title={<>2021</>} description="..." />
+          <BentoCard src="" title={<>2021</>} description="SAMYAK 2021" />
         </BentoTilt>
       </div>
     </div>
