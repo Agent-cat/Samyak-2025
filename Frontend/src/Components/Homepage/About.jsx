@@ -3,6 +3,7 @@ import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/all";
 import samyak from "../../assets/samyak.JPG";
 import AnimatedTitle from "./AnimatedTitle";
+
 // import CurvedLoop from "../ui/CurvedLoop";
 
 gsap.registerPlugin(ScrollTrigger);

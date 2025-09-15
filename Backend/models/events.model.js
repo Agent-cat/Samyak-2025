@@ -53,6 +53,7 @@ const eventSchema = new mongoose.Schema({
       termsandconditions: {
         type: String,
         required: true,
+        
       },
       image: {
         type: String,
