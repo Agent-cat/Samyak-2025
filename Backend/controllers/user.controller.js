@@ -25,6 +25,7 @@ export const register = async (req, res) => {
       phoneNumber,
       country,
       otherCountryName,
+      profileImage,
     } = req.body;
 
     const existingUser = await User.findOne({
@@ -55,6 +56,7 @@ export const register = async (req, res) => {
         address,
         phoneNumber,
         country: country === "Other" ? otherCountryName : country,
+        profileImage,
         paymentStatus: "approved",
         isApproved: true,
         hasEntered: false,
@@ -96,6 +98,7 @@ export const register = async (req, res) => {
       country: country === "Other" ? otherCountryName : country,
       paymentId,
       paymentScreenshot,
+      profileImage,
       paymentStatus: "pending",
       isApproved: false,
       registrationData: {
@@ -214,7 +217,7 @@ export const sendVerificationOTP = async (req, res) => {
 
     console.log('Received verification request for:', email);
 
-    // Check if email already exists
+    
     const existingUser = await User.findOne({ email });
     if (existingUser) {
       return res.status(400).json({ error: "Email already registered" });

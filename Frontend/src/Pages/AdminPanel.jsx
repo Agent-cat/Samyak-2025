@@ -124,7 +124,7 @@ const EventModal = React.memo(
               <div>
                 <label className="block text-purple-300 mb-2">Image URL</label>
                 <input
-                  type="url"
+                  type="file"
                   value={eventForm.image}
                   onChange={(e) =>
                     setEventForm({ ...eventForm, image: e.target.value })

@@ -1,6 +1,9 @@
 import nodemailer from 'nodemailer';
 import { Buffer } from 'buffer';
+import dotenv from "dotenv"
+dotenv.config();
 
+console.log(process.env.EMAIL_USER,process.env.EMAIL_PASSWORD)
 const transporter = nodemailer.createTransport({
     host: 'smtp.office365.com',
     port: 587,
@@ -47,7 +50,7 @@ export const sendOTPEmail = async (email, otp) => {
 
 export const sendEmailWithAttachment = async (email, qrCodeDataUrl) => {
     try {
-        // Convert data URL to a buffer
+        
         const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, "");
         const qrCodeBuffer = Buffer.from(base64Data, 'base64');
 

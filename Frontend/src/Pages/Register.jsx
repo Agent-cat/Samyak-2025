@@ -15,7 +15,7 @@ const Register = () => {
     password: "",
     confirmPassword: "",
     phoneNumber: "",
-    college: "kluniversity",
+    college: "",
     collegeId: "",
     otherCollegeName: "",
     state: "",
@@ -23,13 +23,14 @@ const Register = () => {
     country: "India",
     otherCountryName: "",
     image: null,
+    profileImage: "",
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState(null);
   const [isEmailVerified, setIsEmailVerified] = useState(false);
   const [showOTPInput, setShowOTPInput] = useState(false);
-  const [otp, setOtp] = useState('');
-  const [otpError, setOtpError] = useState('');
+  const [otp, setOtp] = useState("");
+  const [otpError, setOtpError] = useState("");
   const [showPopup, setShowPopup] = useState(false);
 
   const indianStates = [
@@ -92,6 +93,17 @@ const Register = () => {
   };
 
   const handleSendOTP = async () => {
+    if (
+      formData.college === "kluniversity" &&
+      !formData.email.endsWith("@kluniversity.in")
+    ) {
+      setError(
+        "Please use your KL University email address (@kluniversity.in)."
+      );
+      setShowPopup(true);
+      return;
+    }
+
     try {
       setIsLoading(true);
       setError(null);
@@ -99,32 +111,33 @@ const Register = () => {
 
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(formData.email)) {
-        throw new Error('Please enter a valid email address');
+        throw new Error("Please enter a valid email address");
       }
 
-      console.log('Sending OTP request for:', formData.email);
+      console.log("Sending OTP request for:", formData.email);
 
       const response = await fetch(`${url}/api/users/send-verification-otp`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ email: formData.email }),
       });
 
       const data = await response.json();
 
-      console.log('Server response:', data);
+      console.log("Server response:", data);
 
       if (!response.ok) {
-        throw new Error(data.error || 'Failed to send OTP');
+        throw new Error(data.error || "Failed to send OTP");
       }
 
       setShowOTPInput(true);
       setError(null);
     } catch (error) {
-      console.error('Error sending OTP:', error);
-      setError(error.message || 'Failed to send OTP. Please try again later.');
+      console.error("Error sending OTP:", error);
+      setError(error.message || "Failed to send OTP. Please try again later.");
+      setShowPopup(true);
     } finally {
       setIsLoading(false);
     }
@@ -136,9 +149,9 @@ const Register = () => {
       setOtpError(null);
 
       const response = await fetch(`${url}/api/users/verify-otp`, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({
           email: formData.email,
@@ -161,15 +174,39 @@ const Register = () => {
     }
   };
 
-  const handleImageChange = (e) => {
+  const handleImageChange = async (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > MAX_IMAGE_SIZE) {
-        setError("Image size should not exceed 2MB.");
-        setShowPopup(true);
-        return;
+    if (!file) return;
+    if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.type)) {
+      setError("Only JPG, JPEG, PNG or WEBP images are allowed.");
+      setShowPopup(true);
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setError("Image size should not exceed 2MB.");
+      setShowPopup(true);
+      return;
+    }
+    setFormData((prev) => ({ ...prev, image: file }));
+
+    try {
+      setIsLoading(true);
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${url}/api/users/upload`, {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        throw new Error(data.error || "Failed to upload image");
       }
-      setFormData({ ...formData, image: file });
+      setFormData((prev) => ({ ...prev, profileImage: data.url }));
+    } catch (err) {
+      setError(err.message || "Image upload failed");
+      setShowPopup(true);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -178,25 +215,53 @@ const Register = () => {
     setError(null);
 
     if (step === 1) {
-      if (!formData.fullName || !formData.email || !formData.password || !formData.confirmPassword || !formData.phoneNumber) {
+      if (
+        !formData.fullName ||
+        !formData.email ||
+        !formData.password ||
+        !formData.confirmPassword ||
+        !formData.phoneNumber
+      ) {
         setError("Please fill in all required fields.");
+        setShowPopup(true);
         return;
       }
       if (formData.password !== formData.confirmPassword) {
         setError("Passwords do not match.");
+        setShowPopup(true);
         return;
       }
       if (!isEmailVerified) {
         setError("Please verify your email first.");
+        setShowPopup(true);
         return;
       }
-      if (formData.college === "kluniversity" && !formData.email.endsWith("@kluniversity.in")) {
-        setError("Please use your KL University email address.");
+      if (
+        formData.college === "kluniversity" &&
+        !formData.email.endsWith("@kluniversity.in")
+      ) {
+        setError(
+          "Please use your KL University email address (@kluniversity.in)."
+        );
+        setShowPopup(true);
         return;
       }
     } else if (step === 2) {
-      if (!formData.collegeId || (formData.college === "other" && !formData.otherCollegeName)) {
+      if (
+        !formData.collegeId ||
+        (formData.college === "other" && !formData.otherCollegeName)
+      ) {
         setError("Please provide all college details.");
+        setShowPopup(true);
+        return;
+      }
+    } else if (step === 3) {
+      if (
+        !formData.address ||
+        (formData.country === "India" && !formData.state)
+      ) {
+        setError("Please provide your address and state.");
+        setShowPopup(true);
         return;
       }
     }
@@ -215,19 +280,20 @@ const Register = () => {
     setError(null);
 
     try {
+      if (!formData.profileImage) {
+        throw new Error("Please upload your image before submitting.");
+      }
       if (formData.college === "kluniversity") {
-        const response = await fetch(
-          `${url}/api/users/register`,
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              ...formData,
-            }),
-          }
-        );
+        const response = await fetch(`${url}/api/users/register`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            ...formData,
+            profileImage: formData.profileImage,
+          }),
+        });
 
         const data = await response.json();
 
@@ -245,7 +311,11 @@ const Register = () => {
         });
         navigate("/");
       } else {
-        navigate("/payment", { state: { formData } });
+        navigate("/payment", {
+          state: {
+            formData: { ...formData, profileImage: formData.profileImage },
+          },
+        });
       }
     } catch (error) {
       setError(error.message || "An error occurred during registration.");
@@ -268,7 +338,10 @@ const Register = () => {
             className="space-y-6"
           >
             <div>
-              <label htmlFor="fullName" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="fullName"
+                className="block text-white mb-2 font-mono"
+              >
                 Full Name
               </label>
               <input
@@ -283,7 +356,10 @@ const Register = () => {
               />
             </div>
             <div>
-              <label htmlFor="email" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="email"
+                className="block text-white mb-2 font-mono"
+              >
                 Email
               </label>
               <input
@@ -297,7 +373,8 @@ const Register = () => {
                 disabled={isLoading || isEmailVerified}
               />
               <p className="text-sm text-white/80 mt-1 font-sans">
-                Note: KL University students should use their official university Email.
+                Note: KL University students should use their official
+                university Email.
               </p>
             </div>
             {!isEmailVerified && (
@@ -306,16 +383,22 @@ const Register = () => {
                   type="button"
                   onClick={handleSendOTP}
                   disabled={isLoading || !formData.email || isEmailVerified}
-                  className={`px-4 py-2 text-sm rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${isLoading || !formData.email || isEmailVerified ? 'opacity-50 cursor-not-allowed' : ''
-                    }`}
+                  className={`px-4 py-2 text-sm rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${
+                    isLoading || !formData.email || isEmailVerified
+                      ? "opacity-50 cursor-not-allowed"
+                      : ""
+                  }`}
                 >
-                  {isLoading ? 'Sending...' : 'Verify Email'}
+                  {isLoading ? "Sending..." : "Verify Email"}
                 </button>
               </div>
             )}
             {showOTPInput && (
               <div className="mt-4">
-                <label htmlFor="otp" className="block text-white mb-2 font-mono">
+                <label
+                  htmlFor="otp"
+                  className="block text-white mb-2 font-mono"
+                >
                   Enter OTP
                 </label>
                 <div className="flex gap-2">
@@ -333,22 +416,32 @@ const Register = () => {
                     type="button"
                     onClick={handleVerifyOTP}
                     disabled={isLoading || otp.length !== 6}
-                    className={`px-4 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${isLoading || otp.length !== 6 ? 'opacity-50 cursor-not-allowed' : ''
-                      }`}
+                    className={`px-4 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${
+                      isLoading || otp.length !== 6
+                        ? "opacity-50 cursor-not-allowed"
+                        : ""
+                    }`}
                   >
-                    {isLoading ? 'Verifying...' : 'Verify'}
+                    {isLoading ? "Verifying..." : "Verify"}
                   </button>
                 </div>
                 {otpError && (
-                  <p className="text-red-500 text-sm mt-1 font-sans">{otpError}</p>
+                  <p className="text-red-500 text-sm mt-1 font-sans">
+                    {otpError}
+                  </p>
                 )}
               </div>
             )}
             {isEmailVerified && (
-              <span className="text-green-500 text-sm font-sans">✓ Email Verified</span>
+              <span className="text-green-500 text-sm font-sans">
+                ✓ Email Verified
+              </span>
             )}
             <div>
-              <label htmlFor="password" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="password"
+                className="block text-white mb-2 font-mono"
+              >
                 Password
               </label>
               <input
@@ -363,7 +456,10 @@ const Register = () => {
               />
             </div>
             <div>
-              <label htmlFor="confirmPassword" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="confirmPassword"
+                className="block text-white mb-2 font-mono"
+              >
                 Confirm Password
               </label>
               <input
@@ -378,7 +474,10 @@ const Register = () => {
               />
             </div>
             <div>
-              <label htmlFor="phoneNumber" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="phoneNumber"
+                className="block text-white mb-2 font-mono"
+              >
                 Phone Number
               </label>
               <input
@@ -398,8 +497,11 @@ const Register = () => {
               type="button"
               onClick={handleNextStep}
               disabled={isLoading || !isEmailVerified}
-              className={`w-full bg-white/20 text-white p-3 rounded-lg transition-all duration-300 font-mono ${isLoading || !isEmailVerified ? "opacity-50 cursor-not-allowed" : "hover:bg-white/30"
-                }`}
+              className={`w-full bg-white/20 text-white p-3 rounded-lg transition-all duration-300 font-mono ${
+                isLoading || !isEmailVerified
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-white/30"
+              }`}
             >
               Next
             </button>
@@ -416,7 +518,10 @@ const Register = () => {
             className="space-y-6"
           >
             <div>
-              <label htmlFor="college" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="college"
+                className="block text-white mb-2 font-mono"
+              >
                 College
               </label>
               <select
@@ -433,13 +538,17 @@ const Register = () => {
               </select>
               {formData.college === "other" && (
                 <p className="mt-2 text-sm text-white font-sans">
-                  Note: Non-KL University students are required to pay ₹310 registration fee.
+                  Note: Non-KL University students are required to pay ₹310
+                  registration fee.
                 </p>
               )}
             </div>
             {formData.college === "other" && (
               <div>
-                <label htmlFor="otherCollegeName" className="block text-white mb-2 font-mono">
+                <label
+                  htmlFor="otherCollegeName"
+                  className="block text-white mb-2 font-mono"
+                >
                   College Name
                 </label>
                 <input
@@ -456,7 +565,10 @@ const Register = () => {
               </div>
             )}
             <div>
-              <label htmlFor="collegeId" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="collegeId"
+                className="block text-white mb-2 font-mono"
+              >
                 College ID
               </label>
               <input
@@ -482,8 +594,9 @@ const Register = () => {
                 type="button"
                 onClick={handleNextStep}
                 disabled={isLoading}
-                className={`px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${isLoading ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
+                className={`px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${
+                  isLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
               >
                 Next
               </button>
@@ -501,7 +614,10 @@ const Register = () => {
             className="space-y-6"
           >
             <div>
-              <label htmlFor="country" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="country"
+                className="block text-white mb-2 font-mono"
+              >
                 Country
               </label>
               <select
@@ -532,7 +648,10 @@ const Register = () => {
             </div>
             {formData.country === "India" && (
               <div>
-                <label htmlFor="state" className="block text-white mb-2 font-mono">
+                <label
+                  htmlFor="state"
+                  className="block text-white mb-2 font-mono"
+                >
                   State
                 </label>
                 <select
@@ -554,7 +673,10 @@ const Register = () => {
               </div>
             )}
             <div>
-              <label htmlFor="address" className="block text-white mb-2 font-mono">
+              <label
+                htmlFor="address"
+                className="block text-white mb-2 font-mono"
+              >
                 Address
               </label>
               <textarea
@@ -577,10 +699,72 @@ const Register = () => {
                 Back
               </button>
               <button
-                type="submit"
+                type="button"
+                onClick={handleNextStep}
                 disabled={isLoading}
-                className={`w-full bg-white/20 text-white p-3 rounded-lg transition-all duration-300 font-mono ${isLoading ? "opacity-50 cursor-not-allowed" : "hover:bg-white/30"
-                  }`}
+                className={`px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${
+                  isLoading ? "opacity-50 cursor-not-allowed" : ""
+                }`}
+              >
+                Next
+              </button>
+            </div>
+          </motion.div>
+        );
+      case 4:
+        return (
+          <motion.div
+            key="step4"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
+            <div>
+              <label
+                htmlFor="image"
+                className="block text-white mb-2 font-mono"
+              >
+                Upload Student Image
+              </label>
+              <input
+                type="file"
+                id="image"
+                accept="image/png,image/jpeg,image/jpg,image/webp"
+                onChange={handleImageChange}
+                disabled={isLoading}
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+              />
+              {formData.profileImage && (
+                <div className="mt-4">
+                  <img
+                    src={formData.profileImage}
+                    alt="Preview"
+                    className="w-32 h-32 object-cover rounded border border-white/20"
+                  />
+                  <p className="text-xs text-white/60 mt-1 font-sans">
+                    Image uploaded successfully.
+                  </p>
+                </div>
+              )}
+            </div>
+            <div className="flex justify-between">
+              <button
+                type="button"
+                onClick={handlePrevStep}
+                className="px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono"
+              >
+                Back
+              </button>
+              <button
+                type="submit"
+                disabled={isLoading || !formData.profileImage}
+                className={`w-full bg-white/20 text-white p-3 rounded-lg transition-all duration-300 font-mono ${
+                  isLoading || !formData.profileImage
+                    ? "opacity-50 cursor-not-allowed"
+                    : "hover:bg-white/30"
+                }`}
               >
                 {isLoading ? "Registering..." : "Register"}
               </button>
@@ -625,8 +809,11 @@ const Register = () => {
           <div className="flex justify-center mb-6">
             <div className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${step >= 1 ? 'bg-white border-white' : 'bg-transparent border-white/50 text-white/50'
-                  }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${
+                  step >= 1
+                    ? "bg-white border-white"
+                    : "bg-transparent border-white/50 text-white/50"
+                }`}
               >
                 1
               </div>
@@ -634,8 +821,11 @@ const Register = () => {
             </div>
             <div className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${step >= 2 ? 'bg-white border-white' : 'bg-transparent border-white/50 text-white/50'
-                  }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${
+                  step >= 2
+                    ? "bg-white border-white"
+                    : "bg-transparent border-white/50 text-white/50"
+                }`}
               >
                 2
               </div>
@@ -643,17 +833,30 @@ const Register = () => {
             </div>
             <div className="flex items-center">
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${step >= 3 ? 'bg-white border-white' : 'bg-transparent border-white/50 text-white/50'
-                  }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${
+                  step >= 3
+                    ? "bg-white border-white"
+                    : "bg-transparent border-white/50 text-white/50"
+                }`}
               >
                 3
               </div>
+              <div className="w-16 h-0.5 bg-white/20 mx-2"></div>
+            </div>
+            <div className="flex items-center">
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-black border-2 transition-all duration-300 ${
+                  step >= 4
+                    ? "bg-white border-white"
+                    : "bg-transparent border-white/50 text-white/50"
+                }`}
+              >
+                4
+              </div>
             </div>
           </div>
-          <form onSubmit={step === 3 ? handleSubmit : handleNextStep}>
-            <AnimatePresence mode="wait">
-              {renderStep()}
-            </AnimatePresence>
+          <form onSubmit={step === 4 ? handleSubmit : handleNextStep}>
+            <AnimatePresence mode="wait">{renderStep()}</AnimatePresence>
           </form>
         </motion.div>
       </div>

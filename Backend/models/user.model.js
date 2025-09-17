@@ -9,7 +9,7 @@ const userSchema = new mongoose.Schema(
     },
     role: {
       type: String,
-      enum: ["user", "admin"],
+      enum: ["user", "admin","hod","manager"],
       default: "user",
     },
     password: {
@@ -32,6 +32,9 @@ const userSchema = new mongoose.Schema(
       type: String,
     },
     paymentProof: {
+      type: String,
+    },
+    profileImage: {
       type: String,
     },
     isApproved: {
