@@ -8,14 +8,14 @@ import GenericPopup from "../Components/GenericPopup";
 const Register = () => {
   const url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
-  const [step, setStep] = useState(4);
+  const [step, setStep] = useState(1);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
     password: "",
     confirmPassword: "",
     phoneNumber: "",
-    college: "",
+    college: "kluniversity", // Default to KL University
     collegeId: "",
     otherCollegeName: "",
     state: "",
@@ -283,6 +283,7 @@ const Register = () => {
       if (!formData.profileImage) {
         throw new Error("Please upload your image before submitting.");
       }
+      
       if (formData.college === "kluniversity") {
         const response = await fetch(`${url}/api/users/register`, {
           method: "POST",
