@@ -8,7 +8,7 @@ import GenericPopup from "../Components/GenericPopup";
 const Register = () => {
   const url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(4);
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -724,10 +724,13 @@ const Register = () => {
             <div>
               <label
                 htmlFor="image"
-                className="block text-white mb-2 font-mono"
+                className=" text-white gap-3 flex mb-2 font-mono"
               >
-                Upload Student Image
+                Upload Student Image <p className="text-rose-600">*</p>
               </label>
+              <p className="text-sm text-red-500 mt-1">
+                Image size should be less than 2MB.
+              </p>
               <input
                 type="file"
                 id="image"
@@ -749,7 +752,7 @@ const Register = () => {
                 </div>
               )}
             </div>
-            <div className="flex justify-between">
+            <div className="flex gap-6 justify-between">
               <button
                 type="button"
                 onClick={handlePrevStep}
