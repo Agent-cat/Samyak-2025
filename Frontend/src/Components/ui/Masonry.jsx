@@ -58,6 +58,7 @@ const Masonry = ({
   hoverScale = 0.95,
   blurToFocus = true,
   colorShiftOnHover = false,
+  onItemClick,
 }) => {
   const columns = useMedia(
     [
@@ -221,9 +222,9 @@ const Masonry = ({
           <div
             key={item.id}
             data-key={item.id}
-            className="absolute box-content"
+            className="absolute box-content cursor-zoom-in"
             style={{ willChange: "transform, width, height, opacity" }}
-            onClick={() => window.open(item.url, "_blank", "noopener")}
+            onClick={() => onItemClick && onItemClick(item)}
             onMouseEnter={(e) => handleMouseEnter(item.id, e.currentTarget)}
             onMouseLeave={(e) => handleMouseLeave(item.id, e.currentTarget)}
           >

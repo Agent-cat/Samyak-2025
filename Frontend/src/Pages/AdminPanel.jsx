@@ -11,6 +11,36 @@ const EventModal = React.memo(
     editingEvent,
   }) => {
     const url = import.meta.env.VITE_API_URL;
+    const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+
+    const handleEventImageChange = async (e) => {
+      const file = e.target.files && e.target.files[0];
+      if (!file) return;
+      if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.type)) {
+        alert("Only JPG, JPEG, PNG or WEBP images are allowed.");
+        return;
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        alert("Image size should not exceed 2MB.");
+        return;
+      }
+
+      try {
+        const form = new FormData();
+        form.append("file", file);
+        const res = await fetch(`${url}/api/events/upload`, {
+          method: "POST",
+          body: form,
+        });
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || "Failed to upload image");
+        }
+        setEventForm({ ...eventForm, image: data.url });
+      } catch (err) {
+        alert(err.message || "Failed to upload image");
+      }
+    };
     return (
       <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto">
         <div className="bg-gray-800 rounded-xl w-full max-w-2xl my-8 mx-4 relative">
@@ -122,16 +152,23 @@ const EventModal = React.memo(
               </div>
 
               <div>
-                <label className="block text-purple-300 mb-2">Image URL</label>
+                <label className="block text-purple-300 mb-2">Event Image</label>
                 <input
                   type="file"
-                  value={eventForm.image}
-                  onChange={(e) =>
-                    setEventForm({ ...eventForm, image: e.target.value })
-                  }
+                  accept="image/png,image/jpeg,image/jpg,image/webp"
+                  onChange={handleEventImageChange}
                   className="w-full bg-gray-700 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   required
                 />
+                {eventForm.image && (
+                  <div className="mt-3">
+                    <img
+                      src={eventForm.image}
+                      alt="Event"
+                      className="w-40 h-40 object-cover rounded border border-gray-600"
+                    />
+                  </div>
+                )}
               </div>
 
               <div>

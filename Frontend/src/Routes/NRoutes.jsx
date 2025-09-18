@@ -9,6 +9,7 @@ import Register from "../Pages/Register";
 import ProtectedRoute from "../utils/ProtectedRoute";
 import PaymentPage from "../Pages/PaymentPage";
 import AdminPanel from "../Pages/AdminPanel";
+import EventsPanel from "../Pages/EventsPanel";
 import RegisteredEvents from "../Pages/RegisteredEvents";
 import AuthRoute from "../utils/AuthRoute";
 import { getUser } from "../utils/auth";
@@ -19,6 +20,7 @@ import Team from "../Pages/Team";
 
 const NRoutes = () => {
   const user = getUser();
+  const isPrivileged = ["admin", "hod", "manager"].includes(user?.role);
   const isAdmin = user?.role === "admin";
 
   return (
@@ -59,7 +61,15 @@ const NRoutes = () => {
         path="/admin"
         element={
           <ProtectedRoute>
-            {isAdmin ? <AdminPanel /> : <Navigate to="/" />}
+            {isPrivileged ? <AdminPanel /> : <Navigate to="/" />}
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/events-panel"
+        element={
+          <ProtectedRoute>
+            {isPrivileged ? <EventsPanel /> : <Navigate to="/" />}
           </ProtectedRoute>
         }
       />

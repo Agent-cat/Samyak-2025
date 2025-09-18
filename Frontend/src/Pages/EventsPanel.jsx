@@ -1,0 +1,733 @@
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+
+const EventsPanel = () => {
+  const url = import.meta.env.VITE_API_URL;
+  const [categories, setCategories] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editingEvent, setEditingEvent] = useState(null);
+  const [selectedCategoryId, setSelectedCategoryId] = useState(null);
+  const [categoryForm, setCategoryForm] = useState({ categoryName: "" });
+  const [eventForm, setEventForm] = useState({
+    title: "",
+    description: "",
+    venue: "",
+    date: "",
+    startTime: "",
+    endTime: "",
+    image: "",
+    termsandconditions: "",
+    participantLimit: "",
+  });
+  const MAX_IMAGE_SIZE = 2 * 1024 * 1024; // 2MB
+  const [notification, setNotification] = useState({
+    open: false,
+    type: "info",
+    message: "",
+  });
+  const [confirmState, setConfirmState] = useState({
+    open: false,
+    message: "",
+    onConfirm: null,
+  });
+
+  const fetchEvents = useCallback(async () => {
+    try {
+      const response = await fetch(`${url}/api/events`, {
+        headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
+      });
+      if (!response.ok) throw new Error("Failed to fetch events");
+      const data = await response.json();
+      setCategories(data);
+    } catch (err) {
+      console.error(err);
+      setNotification({
+        open: true,
+        type: "error",
+        message: "Failed to fetch events. Please try again.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [url]);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
+
+  const closeEventModal = useCallback(() => {
+    setShowEventModal(false);
+    setEditingEvent(null);
+    setEventForm({
+      title: "",
+      description: "",
+      venue: "",
+      date: "",
+      startTime: "",
+      endTime: "",
+      image: "",
+      termsandconditions: "",
+      participantLimit: "",
+    });
+  }, []);
+
+  const openAddEvent = (categoryId) => {
+    setSelectedCategoryId(categoryId);
+    setEditingEvent(null);
+    setShowEventModal(true);
+  };
+
+  const openEditEvent = (category, event) => {
+    setSelectedCategoryId(category._id);
+    setEditingEvent(event);
+    setEventForm({
+      title: event.title,
+      description: event.details.description,
+      venue: event.details.venue,
+      date: event.details.date,
+      startTime: event.details.startTime,
+      endTime: event.details.endTime,
+      image: event.image,
+      termsandconditions: event.termsandconditions,
+      participantLimit: event.participantLimit,
+    });
+    setShowEventModal(true);
+  };
+
+  const handleEventImageChange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!/^image\/(jpeg|jpg|png|webp)$/.test(file.type)) {
+      setNotification({
+        open: true,
+        type: "error",
+        message: "Only JPG, JPEG, PNG or WEBP images are allowed.",
+      });
+      return;
+    }
+    if (file.size > MAX_IMAGE_SIZE) {
+      setNotification({
+        open: true,
+        type: "error",
+        message: "Image size should not exceed 2MB.",
+      });
+      return;
+    }
+    try {
+      const form = new FormData();
+      form.append("file", file);
+      const res = await fetch(`${url}/api/events/upload`, {
+        method: "POST",
+        body: form,
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Failed to upload image");
+      setEventForm((prev) => ({ ...prev, image: data.url }));
+    } catch (err) {
+      setNotification({
+        open: true,
+        type: "error",
+        message: err.message || "Failed to upload image",
+      });
+    }
+  };
+
+  const handleEventSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const payload = {
+        title: eventForm.title,
+        details: {
+          description: eventForm.description,
+          venue: eventForm.venue,
+          date: eventForm.date,
+          startTime: eventForm.startTime,
+          endTime: eventForm.endTime,
+        },
+        image: eventForm.image,
+        termsandconditions: eventForm.termsandconditions,
+        participantLimit: eventForm.participantLimit,
+      };
+      const response = await fetch(
+        editingEvent
+          ? `${url}/api/events/${selectedCategoryId}/events/${editingEvent._id}`
+          : `${url}/api/events/${selectedCategoryId}/events`,
+        {
+          method: editingEvent ? "PUT" : "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(payload),
+        }
+      );
+      if (!response.ok) throw new Error("Failed to save event");
+      await fetchEvents();
+      closeEventModal();
+      setNotification({
+        open: true,
+        type: "success",
+        message: editingEvent ? "Event updated" : "Event created",
+      });
+    } catch (err) {
+      console.error(err);
+      setNotification({
+        open: true,
+        type: "error",
+        message: "Failed to save event. Please try again.",
+      });
+    }
+  };
+
+  const handleDeleteEvent = async (categoryId, eventId) => {
+    setConfirmState({
+      open: true,
+      message: "Are you sure you want to delete this event?",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(
+            `${url}/api/events/${categoryId}/events/${eventId}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          if (!response.ok) throw new Error("Failed to delete event");
+          await fetchEvents();
+          setNotification({
+            open: true,
+            type: "success",
+            message: "Event deleted",
+          });
+        } catch (err) {
+          console.error(err);
+          setNotification({
+            open: true,
+            type: "error",
+            message: "Failed to delete event.",
+          });
+        } finally {
+          setConfirmState({ open: false, message: "", onConfirm: null });
+        }
+      },
+    });
+  };
+
+  const handleAddCategory = () => {
+    setCategoryForm({ categoryName: "" });
+    setShowCategoryModal(true);
+  };
+
+  const handleCategorySubmit = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch(`${url}/api/events/category`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify(categoryForm),
+      });
+      if (!response.ok) throw new Error("Failed to create category");
+      await fetchEvents();
+      setShowCategoryModal(false);
+    } catch (err) {
+      console.error(err);
+      alert("Failed to create category.");
+    }
+  };
+
+  const handleDeleteCategory = async (categoryId) => {
+    setConfirmState({
+      open: true,
+      message: "Delete this category and all its events?",
+      onConfirm: async () => {
+        try {
+          const response = await fetch(
+            `${url}/api/events/category/${categoryId}`,
+            {
+              method: "DELETE",
+              headers: {
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+            }
+          );
+          if (!response.ok) throw new Error("Failed to delete category");
+          await fetchEvents();
+          setNotification({
+            open: true,
+            type: "success",
+            message: "Category deleted",
+          });
+        } catch (err) {
+          console.error(err);
+          setNotification({
+            open: true,
+            type: "error",
+            message: "Failed to delete category.",
+          });
+        } finally {
+          setConfirmState({ open: false, message: "", onConfirm: null });
+        }
+      },
+    });
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-fuchsia-500"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-white p-6 md:p-10">
+      <div className="pt-16 sm:pt-20"></div>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center justify-between mb-8">
+          <h2 className="text-3xl font-extrabold text-white">Events Panel</h2>
+          <button
+            onClick={handleAddCategory}
+            className="px-5 py-2.5 rounded-lg bg-red-600 text-white hover:bg-red-500 transition-colors border border-white/10"
+          >
+            Add Category
+          </button>
+        </div>
+
+        <div className="space-y-8">
+          {categories.map((category) => (
+            <div
+              key={category._id}
+              className="rounded-2xl border border-white/10 bg-black/60 shadow-xl"
+            >
+              <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
+                <h3 className="text-2xl font-semibold text-white">
+                  {category.categoryName}
+                </h3>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => openAddEvent(category._id)}
+                    className="px-4 py-2 rounded-lg bg-white text-black hover:bg-white/80 border border-white/10"
+                  >
+                    Add Event
+                  </button>
+                  <button
+                    onClick={() => handleDeleteCategory(category._id)}
+                    className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500"
+                  >
+                    Delete Category
+                  </button>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 p-5">
+                {category.Events.map((event) => (
+                  <div
+                    key={event._id}
+                    className="rounded-xl border border-white/10 bg-black/80 overflow-hidden"
+                  >
+                    {event.image && (
+                      <img
+                        src={event.image}
+                        alt={event.title}
+                        className="w-full h-44 object-cover"
+                      />
+                    )}
+                    <div className="p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <h4 className="text-lg font-bold text-white">
+                          {event.title}
+                        </h4>
+                        <span className="text-[10px] uppercase tracking-wider bg-white/10 text-white px-2 py-1 rounded border border-white/10">
+                          Limit: {event.participantLimit}
+                        </span>
+                      </div>
+                      <p className="text-sm text-white/70 line-clamp-3">
+                        {event.details.description}
+                      </p>
+                      <div className="grid grid-cols-2 gap-2 text-xs text-white/70">
+                        <div>
+                          <p className="text-white">Venue</p>
+                          <p className="text-white/60">{event.details.venue}</p>
+                        </div>
+                        <div>
+                          <p className="text-white">Date</p>
+                          <p className="text-white/60">{event.details.date}</p>
+                        </div>
+                        <div>
+                          <p className="text-white">Start</p>
+                          <p className="text-white/60">
+                            {event.details.startTime}
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-white">End</p>
+                          <p className="text-white/60">
+                            {event.details.endTime}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          onClick={() => openEditEvent(category, event)}
+                          className="flex-1 px-3 py-2 rounded-md bg-white text-black hover:bg-white/80"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() =>
+                            handleDeleteEvent(category._id, event._id)
+                          }
+                          className="flex-1 px-3 py-2 rounded-md bg-red-600 text-white hover:bg-red-500"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                {category.Events.length === 0 && (
+                  <p className="col-span-full text-center text-white/60">
+                    No events in this category.
+                  </p>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {showCategoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 overflow-y-auto">
+          <div className="w-full max-w-md rounded-2xl bg-black p-6 border border-white/10 my-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-semibold mb-4 text-white">
+              Add Category
+            </h3>
+            <form onSubmit={handleCategorySubmit} className="space-y-4">
+              <div>
+                <label className="block text-sm mb-1 text-white">
+                  Category Name
+                </label>
+                <input
+                  type="text"
+                  value={categoryForm.categoryName}
+                  onChange={(e) =>
+                    setCategoryForm({ categoryName: e.target.value })
+                  }
+                  required
+                  className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                  placeholder="e.g. Coding"
+                />
+              </div>
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 rounded-lg bg-red-600 py-2 hover:bg-red-500 text-white"
+                >
+                  Create
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowCategoryModal(false)}
+                  className="flex-1 rounded-lg bg-white py-2 text-black hover:bg-white/80"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {showEventModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 overflow-y-auto">
+          <div className="w-full max-w-2xl rounded-2xl bg-black p-6 border border-white/10 my-6 max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-semibold mb-4 text-white">
+              {editingEvent ? "Edit Event" : "Add Event"}
+            </h3>
+            <form onSubmit={handleEventSubmit} className="space-y-6">
+              {/* Basic Info */}
+              <div className="grid md:grid-cols-2 gap-4 border border-white/10 rounded-xl p-4">
+                <div className="space-y-2">
+                  <label className="block text-sm text-white flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-4 h-4 text-white"
+                    >
+                      <path d="M3 6a3 3 0 013-3h6a3 3 0 013 3v1h3a1 1 0 110 2h-3v6a3 3 0 01-3 3H6a3 3 0 01-3-3V6zm12 1V6a1 1 0 00-1-1H6a1 1 0 00-1 1v1h10z" />
+                    </svg>
+                    Title
+                  </label>
+                  <input
+                    type="text"
+                    value={eventForm.title}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, title: e.target.value })
+                    }
+                    required
+                    className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                    placeholder="Event title"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm text-white flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-4 h-4 text-white"
+                    >
+                      <path d="M12 2a7 7 0 00-7 7c0 5.25 7 13 7 13s7-7.75 7-13a7 7 0 00-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" />
+                    </svg>
+                    Venue
+                  </label>
+                  <input
+                    type="text"
+                    value={eventForm.venue}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, venue: e.target.value })
+                    }
+                    required
+                    className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                    placeholder="Venue name"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm text-white flex items-center gap-2">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      viewBox="0 0 24 24"
+                      fill="currentColor"
+                      className="w-4 h-4 text-white"
+                    >
+                      <path d="M7 2a1 1 0 011 1v1h8V3a1 1 0 112 0v1h1a2 2 0 012 2v12a2 2 0 01-2 2H4a2 2 0 01-2-2V6a2 2 0 012-2h1V3a1 1 0 112 0v1zm13 6H4v10h16V8z" />
+                    </svg>
+                    Date
+                  </label>
+                  <input
+                    type="date"
+                    value={eventForm.date}
+                    onChange={(e) =>
+                      setEventForm({ ...eventForm, date: e.target.value })
+                    }
+                    required
+                    className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <label className=" text-sm text-white flex items-center gap-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className="w-4 h-4 text-white"
+                      >
+                        <path d="M12 1a11 11 0 1011 11A11.013 11.013 0 0012 1zm.75 11.25V6.5a.75.75 0 00-1.5 0v6a.75.75 0 00.44.68l4 2a.75.75 0 10.66-1.34z" />
+                      </svg>
+                      Start Time
+                    </label>
+                    <input
+                      type="time"
+                      value={eventForm.startTime}
+                      onChange={(e) =>
+                        setEventForm({
+                          ...eventForm,
+                          startTime: e.target.value,
+                        })
+                      }
+                      required
+                      className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className=" text-sm text-white flex items-center gap-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        className="w-4 h-4 text-white"
+                      >
+                        <path d="M12 1a11 11 0 1011 11A11.013 11.013 0 0012 1z" />
+                        <path d="M13 12.75V6.5a1 1 0 10-2 0v6.75a1 1 0 00.55.89l4.5 2.25a1 1 0 10.9-1.78z" />
+                      </svg>
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={eventForm.endTime}
+                      onChange={(e) =>
+                        setEventForm({ ...eventForm, endTime: e.target.value })
+                      }
+                      required
+                      className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Description & Image */}
+              <div className="grid md:grid-cols-2 gap-4">
+                <div className="border border-white/10 rounded-xl p-4 space-y-2">
+                  <label className="block text-sm text-white">
+                    Description
+                  </label>
+                  <textarea
+                    value={eventForm.description}
+                    onChange={(e) =>
+                      setEventForm({
+                        ...eventForm,
+                        description: e.target.value,
+                      })
+                    }
+                    required
+                    className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white min-h-[120px] focus:outline-none focus:border-red-500"
+                    placeholder="Describe the event"
+                  />
+                </div>
+                <div className="border border-white/10 rounded-xl p-4">
+                  <label className="block text-sm text-white mb-2">
+                    Event Image
+                  </label>
+                  <input
+                    type="file"
+                    accept="image/png,image/jpeg,image/jpg,image/webp"
+                    onChange={handleEventImageChange}
+                    className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white"
+                  />
+                  <p className="text-xs text-white/60 mt-2">
+                    Max size 2MB. Formats: JPG, JPEG, PNG, WEBP.
+                  </p>
+                  {eventForm.image && (
+                    <img
+                      src={eventForm.image}
+                      alt="preview"
+                      className="mt-3 w-full max-w-xs h-40 object-cover rounded border border-white/20"
+                    />
+                  )}
+                </div>
+              </div>
+
+              {/* Limits & Terms */}
+              <div className="grid md:grid-cols-2 gap-4 border border-white/10 rounded-xl p-4">
+                <div className="space-y-2">
+                  <label className="block text-sm text-white">
+                    Participant Limit
+                  </label>
+                  <input
+                    type="number"
+                    value={eventForm.participantLimit}
+                    onChange={(e) =>
+                      setEventForm({
+                        ...eventForm,
+                        participantLimit: e.target.value,
+                      })
+                    }
+                    required
+                    className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="block text-sm text-white">
+                    Terms & Conditions
+                  </label>
+                  <textarea
+                    value={eventForm.termsandconditions}
+                    onChange={(e) =>
+                      setEventForm({
+                        ...eventForm,
+                        termsandconditions: e.target.value,
+                      })
+                    }
+                    required
+                    className="w-full bg-black border border-white/20 rounded-lg px-3 py-2 text-white min-h-[120px] focus:outline-none focus:border-red-500"
+                    placeholder="Basic rules and terms"
+                  />
+                </div>
+              </div>
+
+              <div className="flex gap-3 pt-2">
+                <button
+                  type="submit"
+                  className="flex-1 rounded-lg bg-red-600 py-2 hover:bg-red-500 text-white"
+                >
+                  {editingEvent ? "Update" : "Create"}
+                </button>
+                <button
+                  type="button"
+                  onClick={closeEventModal}
+                  className="flex-1 rounded-lg bg-white py-2 text-black hover:bg-white/80"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {notification.open && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+          <div
+            className={`min-w-[280px] max-w-md px-4 py-3 rounded-xl border backdrop-blur-sm ${
+              notification.type === "success"
+                ? "bg-white text-black border-white/20"
+                : notification.type === "error"
+                ? "bg-red-600 text-white border-white/20"
+                : "bg-black/80 text-white border-white/20"
+            }`}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <p className="text-sm">{notification.message}</p>
+              <button
+                onClick={() =>
+                  setNotification({ open: false, type: "info", message: "" })
+                }
+                className="text-sm opacity-80 hover:opacity-100"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {confirmState.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+          <div className="w-full max-w-sm rounded-2xl bg-black p-6 border border-white/10">
+            <h4 className="text-lg font-semibold text-white mb-2">Confirm</h4>
+            <p className="text-white/80 mb-4 text-sm">{confirmState.message}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const fn = confirmState.onConfirm;
+                  if (fn) fn();
+                }}
+                className="flex-1 rounded-lg bg-red-600 py-2 text-white hover:bg-red-500"
+              >
+                Yes, Continue
+              </button>
+              <button
+                onClick={() =>
+                  setConfirmState({ open: false, message: "", onConfirm: null })
+                }
+                className="flex-1 rounded-lg bg-white py-2 text-black hover:bg-white/80"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default EventsPanel;

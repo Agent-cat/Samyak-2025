@@ -4,6 +4,8 @@ import Masonry from "../Components/ui/Masonry";
 const Gallery = () => {
   const [activeCategory, setActiveCategory] = useState("2024");
   const [key, setKey] = useState(0);
+  const [lightboxImg, setLightboxImg] = useState(null);
+  const [lightboxVisible, setLightboxVisible] = useState(false);
 
   const categories = {
     2024: [
@@ -160,14 +162,31 @@ const Gallery = () => {
 
   const handleCategoryChange = (category) => {
     setActiveCategory(category);
-    // Increment the key to force the Masonry component to re-mount.
     setKey((prevKey) => prevKey + 1);
   };
 
+  const handleOpenLightbox = (item) => {
+    setLightboxImg(item.img);
+  };
+
+  useEffect(() => {
+    if (lightboxImg) {
+      const id = requestAnimationFrame(() => setLightboxVisible(true));
+      return () => cancelAnimationFrame(id);
+    } else {
+      setLightboxVisible(false);
+    }
+  }, [lightboxImg]);
+
+  const handleCloseLightbox = () => {
+    setLightboxVisible(false);
+    setTimeout(() => setLightboxImg(null), 200);
+  };
+
   return (
-    <div className="w-full flex flex-col overflow-hidden items-center justify-center font-bold h-screen text-xl md:text-9xl text-white bg-black">
-      <h1 className="mt-14">Gallery</h1>
-      <div className="flex justify-center gap-4 mt-8 mb-8 z-10">
+    <div className="w-full flex flex-col items-center font-bold min-h-screen text-xl md:text-9xl text-white bg-black overflow-y-auto">
+      <h1 className="mt-14 mb-8">Gallery</h1>
+      <div className="flex justify-center gap-4 mb-8 z-10">
         {Object.keys(categories).map((category) => (
           <button
             key={category}
@@ -182,18 +201,49 @@ const Gallery = () => {
           </button>
         ))}
       </div>
-      <Masonry
-        key={key} // Use the key to force a full re-render
-        items={categories[activeCategory]}
-        ease="power3.out"
-        duration={0.6}
-        stagger={0.05}
-        animateFrom="bottom"
-        scaleOnHover={true}
-        hoverScale={0.95}
-        blurToFocus={true}
-        colorShiftOnHover={false}
-      />
+      <div className="w-full max-w-7xl px-4 pb-20">
+        <Masonry
+          key={key} // Use the key to force a full re-render
+          items={categories[activeCategory]}
+          ease="power3.out"
+          duration={0.6}
+          stagger={0.05}
+          animateFrom="bottom"
+          scaleOnHover={true}
+          hoverScale={0.95}
+          blurToFocus={true}
+          colorShiftOnHover={false}
+          onItemClick={handleOpenLightbox}
+        />
+      </div>
+
+      {lightboxImg && (
+        <div
+          className={`fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm transition-opacity duration-200 ${
+            lightboxVisible ? "opacity-100" : "opacity-0"
+          }`}
+          onClick={handleCloseLightbox}
+        >
+          <button
+            aria-label="Close"
+            className={`absolute top-4 right-4 text-white text-3xl leading-none px-3 py-1 rounded-md bg-white/10 hover:bg-white/20 transition-colors duration-200`}
+            onClick={(e) => {
+              e.stopPropagation();
+              handleCloseLightbox();
+            }}
+          >
+            ×
+          </button>
+          <img
+            src={lightboxImg}
+            alt="preview"
+            className={`max-w-[95vw] max-h-[85vh] rounded-lg shadow-2xl border border-white/10 transition-transform duration-200 ${
+              lightboxVisible ? "scale-100" : "scale-95"
+            }`}
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 };

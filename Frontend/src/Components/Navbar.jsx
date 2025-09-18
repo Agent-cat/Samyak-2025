@@ -1,7 +1,7 @@
 import clsx from "clsx";
 import gsap from "gsap";
 import { useWindowScroll } from "react-use";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { NavItems, adminNavItems } from "../Constants/Constants";
 import { getUser, removeToken, removeUser } from "../utils/auth";
@@ -90,7 +90,12 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
   );
 
   const isAdmin = user?.role === "admin";
+  const isPrivileged = ["admin", "hod", "manager"].includes(user?.role);
   const navigationLinks = isAdmin ? [...NavItems, adminNavItems] : NavItems;
+  const extendedLinks = useMemo(() => {
+    if (!isPrivileged) return navigationLinks;
+    return [...navigationLinks, { title: "Events Panel", to: "/events-panel" }];
+  }, [navigationLinks, isPrivileged]);
 
   useEffect(() => {
     const handleStorageChange = () => setUser(getUser());
@@ -184,15 +189,15 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
         <header className="absolute top-1/2 w-full -translate-y-1/2">
           <div className="flex items-center justify-between">
             <Link to="/" className="flex items-center justify-center">
-              <h1 className=" ml-4 text-white font-bold hidden md:flex md:text-2xl">
+              <h1 className=" ml-8 text-white font-bold hidden md:flex md:text-2xl">
                 SAMYAK
               </h1>
-              <img className="w-20 h-auto" src="/img/samyak.svg" alt="" />
+              <img className="w-16 h-auto" src="/img/samyak.svg" alt="" />
             </Link>
             <nav className="flex size-full items-center justify-center p-4 text-2xl font-bold">
               <div className="flex h-full items-center">
                 <div className="hidden md:block">
-                  {navigationLinks.map((item, index) => (
+                  {extendedLinks.map((item, index) => (
                     <NavLink
                       to={item.to}
                       key={index}
@@ -280,7 +285,7 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
       >
         <div className="flex h-full w-full flex-col items-center justify-between p-8 pt-24">
           <div className="flex w-full flex-col gap-4">
-            {navigationLinks.map((link, index) => (
+            {extendedLinks.map((link, index) => (
               <NavLink
                 key={link.title}
                 to={link.to}
