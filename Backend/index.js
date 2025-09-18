@@ -1,11 +1,11 @@
 import express from "express";
 import cors from "cors";
 import dotenv from 'dotenv';
+dotenv.config();
 import userRoutes from "./routes/user.routes.js";
 import connectDB from "./database/db.js";
 import adminRoutes from "./routes/admin.routes.js";
 import eventRoutes from "./routes/event.routes.js";
-dotenv.config();
 const app = express();
 
 app.use(cors({

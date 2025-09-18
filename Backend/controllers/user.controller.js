@@ -41,7 +41,7 @@ export const register = async (req, res) => {
           "Phone number already registered"
       });
     }
-
+    console.log(college)
     if (college === "kluniversity") {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
