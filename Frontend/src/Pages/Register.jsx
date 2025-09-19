@@ -15,7 +15,7 @@ const Register = () => {
     password: "",
     confirmPassword: "",
     phoneNumber: "",
-    college: "kluniversity", // Default to KL University
+    college: "kluniversity",
     collegeId: "",
     otherCollegeName: "",
     state: "",
@@ -217,10 +217,11 @@ const Register = () => {
     if (step === 1) {
       if (
         !formData.fullName ||
-        !formData.email ||
+        !formData.phoneNumber ||
+        !formData.collegeId ||
         !formData.password ||
         !formData.confirmPassword ||
-        !formData.phoneNumber
+        (formData.college === "other" && !formData.otherCollegeName)
       ) {
         setError("Please fill in all required fields.");
         setShowPopup(true);
@@ -228,6 +229,12 @@ const Register = () => {
       }
       if (formData.password !== formData.confirmPassword) {
         setError("Passwords do not match.");
+        setShowPopup(true);
+        return;
+      }
+    } else if (step === 2) {
+      if (!formData.email) {
+        setError("Please enter your email address.");
         setShowPopup(true);
         return;
       }
@@ -243,15 +250,6 @@ const Register = () => {
         setError(
           "Please use your KL University email address (@kluniversity.in)."
         );
-        setShowPopup(true);
-        return;
-      }
-    } else if (step === 2) {
-      if (
-        !formData.collegeId ||
-        (formData.college === "other" && !formData.otherCollegeName)
-      ) {
-        setError("Please provide all college details.");
         setShowPopup(true);
         return;
       }
@@ -283,7 +281,7 @@ const Register = () => {
       if (!formData.profileImage) {
         throw new Error("Please upload your image before submitting.");
       }
-      
+
       if (formData.college === "kluniversity") {
         const response = await fetch(`${url}/api/users/register`, {
           method: "POST",
@@ -356,6 +354,151 @@ const Register = () => {
                 disabled={isLoading}
               />
             </div>
+            <div>
+              <label
+                htmlFor="phoneNumber"
+                className="block text-white mb-2 font-mono"
+              >
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                id="phoneNumber"
+                name="phoneNumber"
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+                required
+                pattern="^\+?[\d\s-]{10,15}$"
+                placeholder="Enter your phone number"
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="college"
+                className="block text-white mb-2 font-mono"
+              >
+                College
+              </label>
+              <select
+                id="college"
+                name="college"
+                value={formData.college}
+                onChange={handleCollegeChange}
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+                required
+                disabled={isLoading}
+              >
+                <option value="kluniversity">KL University</option>
+                <option value="other">Other College</option>
+              </select>
+              {formData.college === "other" && (
+                <p className="mt-2 text-sm text-white font-sans">
+                  Note: Non-KL University students are required to pay ₹310
+                  registration fee.
+                </p>
+              )}
+            </div>
+            {formData.college === "other" && (
+              <div>
+                <label
+                  htmlFor="otherCollegeName"
+                  className="block text-white mb-2 font-mono"
+                >
+                  College Name
+                </label>
+                <input
+                  type="text"
+                  id="otherCollegeName"
+                  name="otherCollegeName"
+                  value={formData.otherCollegeName}
+                  onChange={handleChange}
+                  placeholder="Enter your college name"
+                  className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+                  required
+                  disabled={isLoading}
+                />
+              </div>
+            )}
+            <div>
+              <label
+                htmlFor="collegeId"
+                className="block text-white mb-2 font-mono"
+              >
+                College ID
+              </label>
+              <input
+                type="text"
+                id="collegeId"
+                name="collegeId"
+                value={formData.collegeId}
+                onChange={handleChange}
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="password"
+                className="block text-white mb-2 font-mono"
+              >
+                Password
+              </label>
+              <input
+                type="password"
+                id="password"
+                name="password"
+                value={formData.password}
+                onChange={handleChange}
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <label
+                htmlFor="confirmPassword"
+                className="block text-white mb-2 font-mono"
+              >
+                Confirm Password
+              </label>
+              <input
+                type="password"
+                id="confirmPassword"
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
+                required
+                disabled={isLoading}
+              />
+            </div>
+            <button
+              type="button"
+              onClick={handleNextStep}
+              disabled={isLoading}
+              className={`w-full bg-white/20 text-white p-3 rounded-lg transition-all duration-300 font-mono ${
+                isLoading
+                  ? "opacity-50 cursor-not-allowed"
+                  : "hover:bg-white/30"
+              }`}
+            >
+              Next
+            </button>
+          </motion.div>
+        );
+      case 2:
+        return (
+          <motion.div
+            key="step2"
+            initial={{ opacity: 0, x: 50 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -50 }}
+            transition={{ duration: 0.5 }}
+            className="space-y-6"
+          >
             <div>
               <label
                 htmlFor="email"
@@ -438,151 +581,6 @@ const Register = () => {
                 ✓ Email Verified
               </span>
             )}
-            <div>
-              <label
-                htmlFor="password"
-                className="block text-white mb-2 font-mono"
-              >
-                Password
-              </label>
-              <input
-                type="password"
-                id="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-white mb-2 font-mono"
-              >
-                Confirm Password
-              </label>
-              <input
-                type="password"
-                id="confirmPassword"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
-                required
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <label
-                htmlFor="phoneNumber"
-                className="block text-white mb-2 font-mono"
-              >
-                Phone Number
-              </label>
-              <input
-                type="tel"
-                id="phoneNumber"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
-                required
-                pattern="^\+?[\d\s-]{10,15}$"
-                placeholder="Enter your phone number"
-                disabled={isLoading}
-              />
-            </div>
-            <button
-              type="button"
-              onClick={handleNextStep}
-              disabled={isLoading || !isEmailVerified}
-              className={`w-full bg-white/20 text-white p-3 rounded-lg transition-all duration-300 font-mono ${
-                isLoading || !isEmailVerified
-                  ? "opacity-50 cursor-not-allowed"
-                  : "hover:bg-white/30"
-              }`}
-            >
-              Next
-            </button>
-          </motion.div>
-        );
-      case 2:
-        return (
-          <motion.div
-            key="step2"
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            transition={{ duration: 0.5 }}
-            className="space-y-6"
-          >
-            <div>
-              <label
-                htmlFor="college"
-                className="block text-white mb-2 font-mono"
-              >
-                College
-              </label>
-              <select
-                id="college"
-                name="college"
-                value={formData.college}
-                onChange={handleCollegeChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
-                required
-                disabled={isLoading}
-              >
-                <option value="kluniversity">KL University</option>
-                <option value="other">Other College</option>
-              </select>
-              {formData.college === "other" && (
-                <p className="mt-2 text-sm text-white font-sans">
-                  Note: Non-KL University students are required to pay ₹310
-                  registration fee.
-                </p>
-              )}
-            </div>
-            {formData.college === "other" && (
-              <div>
-                <label
-                  htmlFor="otherCollegeName"
-                  className="block text-white mb-2 font-mono"
-                >
-                  College Name
-                </label>
-                <input
-                  type="text"
-                  id="otherCollegeName"
-                  name="otherCollegeName"
-                  value={formData.otherCollegeName}
-                  onChange={handleChange}
-                  placeholder="Enter your college name"
-                  className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
-                  required
-                  disabled={isLoading}
-                />
-              </div>
-            )}
-            <div>
-              <label
-                htmlFor="collegeId"
-                className="block text-white mb-2 font-mono"
-              >
-                College ID
-              </label>
-              <input
-                type="text"
-                id="collegeId"
-                name="collegeId"
-                value={formData.collegeId}
-                onChange={handleChange}
-                className="w-full px-4 py-2 rounded bg-black border border-white/20 text-white focus:outline-none focus:border-white transition-all duration-300"
-                required
-                disabled={isLoading}
-              />
-            </div>
             <div className="flex justify-between">
               <button
                 type="button"
@@ -594,9 +592,9 @@ const Register = () => {
               <button
                 type="button"
                 onClick={handleNextStep}
-                disabled={isLoading}
+                disabled={isLoading || !isEmailVerified}
                 className={`px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${
-                  isLoading ? "opacity-50 cursor-not-allowed" : ""
+                  isLoading || !isEmailVerified ? "opacity-50 cursor-not-allowed" : ""
                 }`}
               >
                 Next
