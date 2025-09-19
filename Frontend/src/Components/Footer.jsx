@@ -1,4 +1,3 @@
-
 import React from "react";
 
 const Footer = () => {
@@ -8,41 +7,62 @@ const Footer = () => {
         <div className="flex flex-col items-center justify-between gap-6 sm:flex-row">
           <div className="flex items-center gap-3">
             <img src="/img/samyak.svg" alt="Samyak" className="h-8 w-8" />
-            <p className="text-sm text-gray-300">© {new Date().getFullYear()} Samyak. All rights reserved.</p>
+            <p className="text-sm text-gray-300">
+              © {new Date().getFullYear()} Samyak. All rights reserved.
+            </p>
           </div>
 
           <nav className="flex items-center gap-6 text-sm">
-            <a href="/" className="text-gray-300 transition-colors hover:text-white">Home</a>
-            <a href="/events" className="text-gray-300 transition-colors hover:text-white">Events</a>
-            <a href="/gallery" className="text-gray-300 transition-colors hover:text-white">Gallery</a>
-            <a href="/team" className="text-gray-300 transition-colors hover:text-white">Team</a>
+            <a
+              href="/"
+              className="text-gray-300 transition-colors hover:text-white"
+            >
+              Home
+            </a>
+            <a
+              href="/events"
+              className="text-gray-300 transition-colors hover:text-white"
+            >
+              Events
+            </a>
+            <a
+              href="/gallery"
+              className="text-gray-300 transition-colors hover:text-white"
+            >
+              Gallery
+            </a>
+            <a
+              href="/team"
+              className="text-gray-300 transition-colors hover:text-white"
+            >
+              Team
+            </a>
           </nav>
         </div>
 
         <div className="mt-6 border-t border-white/10 pt-6">
           <div className="flex flex-col items-center justify-center gap-4 sm:flex-row">
-            
             <div className="flex flex-wrap items-center gap-4 text-sm">
               <span className="text-gray-300">Developed by</span>
               <a
-                href="https://linkedin.com/in/vishnuvardhan"
+                href="https://www.linkedin.com/in/vishnu-vardhan-a8a5b92a1/"
                 target="_blank"
                 rel="noreferrer"
                 className="group inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-white transition-colors hover:border-white/20"
               >
                 <LinkedInIcon />
-                <span className="group-hover:text-red-500">Vishnu Vardhan</span>
+                <span className="group-hover:text-red-500">Vishnu</span>
                 <span className="text-xs text-gray-400">/in/vishnuvardhan</span>
               </a>
               <a
-                href="https://linkedin.com/in/jothika"
+                href="https://www.linkedin.com/in/jyothika-vallurupalli-962665247/"
                 target="_blank"
                 rel="noreferrer"
                 className="group inline-flex items-center gap-2 rounded-full border border-white/10 px-3 py-1 text-white transition-colors hover:border-white/20"
               >
                 <LinkedInIcon />
-                <span className="group-hover:text-red-500">Jothika</span>
-                <span className="text-xs text-gray-400">/in/jothika</span>
+                <span className="group-hover:text-red-500">Jyothika</span>
+                <span className="text-xs text-gray-400">/in/Jyothika</span>
               </a>
             </div>
           </div>
