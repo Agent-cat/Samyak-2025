@@ -594,7 +594,9 @@ const Register = () => {
                 onClick={handleNextStep}
                 disabled={isLoading || !isEmailVerified}
                 className={`px-6 py-2 rounded bg-white/20 text-white hover:bg-white/30 transition-colors font-mono ${
-                  isLoading || !isEmailVerified ? "opacity-50 cursor-not-allowed" : ""
+                  isLoading || !isEmailVerified
+                    ? "opacity-50 cursor-not-allowed"
+                    : ""
                 }`}
               >
                 Next

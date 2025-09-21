@@ -62,6 +62,8 @@ const Events = () => {
   const [filteredEvents, setFilteredEvents] = useState([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedSubcategory, setSelectedSubcategory] = useState("All");
+  const [selectedEventType, setSelectedEventType] = useState("All");
   const [expandedEvent, setExpandedEvent] = useState(null);
   const [showRegisterPopup, setShowRegisterPopup] = useState(false);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
@@ -110,18 +112,54 @@ const Events = () => {
     }
 
     const result = filtered
-      .map((category) => ({
-        ...category,
-        Events: category.Events.filter(
-          (event) =>
-            event.title.toLowerCase().includes(lowercasedTerm) ||
-            event.details.description.toLowerCase().includes(lowercasedTerm)
-        ),
-      }))
-      .filter((category) => category.Events.length > 0);
+      .map((category) => {
+        // Filter direct events
+        const filteredDirectEvents = category.Events?.filter(
+          (event) => {
+            const matchesSearch = event.title.toLowerCase().includes(lowercasedTerm) ||
+              event.details.description.toLowerCase().includes(lowercasedTerm);
+            const matchesEventType = selectedEventType === "All" || event.eventType === selectedEventType;
+            return matchesSearch && matchesEventType;
+          }
+        ) || [];
+
+        // Filter subcategory events
+        const filteredSubcategories =
+          category.subcategories
+            ?.map((subcategory) => ({
+              ...subcategory,
+              Events:
+                subcategory.Events?.filter(
+                  (event) => {
+                    const matchesSearch = event.title.toLowerCase().includes(lowercasedTerm) ||
+                      event.details.description.toLowerCase().includes(lowercasedTerm);
+                    const matchesEventType = selectedEventType === "All" || event.eventType === selectedEventType;
+                    return matchesSearch && matchesEventType;
+                  }
+                ) || [],
+            }))
+            .filter((subcategory) => subcategory.Events.length > 0) || [];
+
+        // Apply subcategory filter if selected
+        let finalSubcategories = filteredSubcategories;
+        if (selectedSubcategory && selectedSubcategory !== "All") {
+          finalSubcategories = filteredSubcategories.filter(
+            (subcategory) => subcategory.subcategoryName === selectedSubcategory
+          );
+        }
+
+        return {
+          ...category,
+          Events: filteredDirectEvents,
+          subcategories: finalSubcategories,
+        };
+      })
+      .filter((category) =>
+        category.Events.length > 0 || category.subcategories.length > 0
+      );
 
     setFilteredEvents(result);
-  }, [searchTerm, selectedCategory, events]);
+  }, [searchTerm, selectedCategory, selectedSubcategory, selectedEventType, events]);
 
   useGSAP(
     () => {
@@ -154,22 +192,33 @@ const Events = () => {
 
   const handleToggleEvent = (eventId) =>
     setExpandedEvent(expandedEvent === eventId ? null : eventId);
-  const handleRegisterClick = (category, event) => {
-    setSelectedEvent({ ...event, categoryId: category._id });
+  const handleRegisterClick = (category, event, subcategory = null) => {
+    setSelectedEvent({
+      ...event,
+      categoryId: category._id,
+      subcategoryId: subcategory ? subcategory._id : null,
+    });
     setShowRegisterPopup(true);
   };
 
-  const handleUnregisterClick = async (category, event) => {
+  const handleUnregisterClick = async (category, event, subcategory = null) => {
     const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
       return;
     }
     try {
-      await fetch(
-        `${url}/api/events/${category._id}/events/${event._id}/unregister`,
-        { method: "DELETE", headers: { Authorization: `Bearer ${token}` } }
-      );
+      let url_path;
+      if (subcategory) {
+        url_path = `${url}/api/events/${category._id}/subcategory/${subcategory._id}/events/${event._id}/unregister`;
+      } else {
+        url_path = `${url}/api/events/${category._id}/events/${event._id}/unregister`;
+      }
+
+      await fetch(url_path, {
+        method: "DELETE",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const response = await axios.get(`${url}/api/events`);
       setEvents(response.data);
       setShowSuccessPopup({
@@ -198,10 +247,17 @@ const Events = () => {
       return;
     }
     try {
-      const response = await fetch(
-        `${url}/api/events/${selectedEvent.categoryId}/events/${selectedEvent._id}/register`,
-        { method: "POST", headers: { Authorization: `Bearer ${token}` } }
-      );
+      let url_path;
+      if (selectedEvent.subcategoryId) {
+        url_path = `${url}/api/events/${selectedEvent.categoryId}/subcategory/${selectedEvent.subcategoryId}/events/${selectedEvent._id}/register`;
+      } else {
+        url_path = `${url}/api/events/${selectedEvent.categoryId}/events/${selectedEvent._id}/register`;
+      }
+
+      const response = await fetch(url_path, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+      });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || "Failed to register.");
 
@@ -324,8 +380,8 @@ const Events = () => {
         ></h1>
       </div>
 
-      <div className="max-w-3xl mx-auto px-4 mb-12 animate-in flex flex-col sm:flex-row gap-4">
-        <div className="relative w-full sm:w-2/3">
+      <div className="max-w-4xl mx-auto px-4 mb-12 animate-in flex flex-col gap-4">
+        <div className="relative w-full">
           <input
             type="text"
             placeholder="Search all events by title or description..."
@@ -337,24 +393,70 @@ const Events = () => {
             <Icon path="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z" />
           </div>
         </div>
-        <div className="relative w-full sm:w-1/3">
-          <select
-            value={selectedCategory}
-            onChange={(e) => {
-              setSelectedCategory(e.target.value);
-              setSearchTerm("");
-            }}
-            className="w-full bg-[#131315] border border-white/[0.1] rounded-full py-3 pl-4 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-300 appearance-none"
-          >
-            <option value="All">All Categories</option>
-            {events.map((category) => (
-              <option key={category._id} value={category.categoryName}>
-                {category.categoryName}
-              </option>
-            ))}
-          </select>
-          <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
-            <Icon path="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
+            <select
+              value={selectedCategory}
+              onChange={(e) => {
+                setSelectedCategory(e.target.value);
+                setSelectedSubcategory("All");
+                setSearchTerm("");
+              }}
+              className="w-full bg-[#131315] border border-white/[0.1] rounded-full py-3 pl-4 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-300 appearance-none"
+            >
+              <option value="All">All Categories</option>
+              {events.map((category) => (
+                <option key={category._id} value={category.categoryName}>
+                  {category.categoryName}
+                </option>
+              ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+              <Icon path="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </div>
+          </div>
+          <div className="relative flex-1">
+            <select
+              value={selectedSubcategory}
+              onChange={(e) => {
+                setSelectedSubcategory(e.target.value);
+                setSearchTerm("");
+              }}
+              className="w-full bg-[#131315] border border-white/[0.1] rounded-full py-3 pl-4 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-300 appearance-none"
+            >
+              <option value="All">All Subcategories</option>
+              {selectedCategory !== "All" &&
+                events
+                  .find((cat) => cat.categoryName === selectedCategory)
+                  ?.subcategories?.map((subcategory) => (
+                    <option
+                      key={subcategory._id}
+                      value={subcategory.subcategoryName}
+                    >
+                      {subcategory.subcategoryName}
+                    </option>
+                  ))}
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+              <Icon path="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </div>
+          </div>
+          <div className="relative flex-1">
+            <select
+              value={selectedEventType}
+              onChange={(e) => {
+                setSelectedEventType(e.target.value);
+                setSearchTerm("");
+              }}
+              className="w-full bg-[#131315] border border-white/[0.1] rounded-full py-3 pl-4 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-300 appearance-none"
+            >
+              <option value="All">All Types</option>
+              <option value="technical">Technical</option>
+              <option value="non-technical">Non-Technical</option>
+            </select>
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
+              <Icon path="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+            </div>
           </div>
         </div>
       </div>
@@ -365,7 +467,9 @@ const Events = () => {
             {apiError}
           </div>
         ) : filteredEvents.length > 0 ? (
-          filteredEvents.map((category, categoryIndex) => (
+          filteredEvents
+            .sort((a, b) => a.categoryName.localeCompare(b.categoryName))
+            .map((category, categoryIndex) => (
             <div key={category._id}>
               {categoryIndex > 0 && (
                 <hr className="w-1/2 mx-auto border-t-0 bg-gradient-to-r from-transparent via-cyan-500/30 to-transparent h-[1px] my-16" />
@@ -379,137 +483,336 @@ const Events = () => {
                     }}
                   />
                 </div>
-                <div className="relative">
-                  <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/[0.08]"></div>
-                  <div className="space-y-8">
-                    {category.Events?.map((event) => (
-                      <div
-                        key={event._id}
-                        className="relative flex items-start ml-4 sm:ml-8 group"
-                      >
-                        <div className="absolute -left-8 -ml-[1.1rem] mt-3 z-10">
-                          <div className="w-3 h-3 bg-cyan-400 rounded-full transition-all duration-300 group-hover:scale-125 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.7)] animate-pulse group-hover:animate-none"></div>
-                        </div>
-                        <BentoTilt className="w-full">
+
+                {/* Direct Events */}
+                {category.Events && category.Events.length > 0 && (
+                  <div className="mb-12">
+                    <h3 className="text-xl font-semibold text-cyan-300 mb-6">Direct Events</h3>
+                    <div className="relative">
+                      <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/[0.08]"></div>
+                      <div className="space-y-8">
+                        {category.Events
+                          .sort((a, b) => a.title.localeCompare(b.title))
+                          .map((event) => (
                           <div
-                            className="bg-[#131315] rounded-2xl p-4 sm:p-6 w-full cursor-pointer transition-all duration-300 border border-white/[0.1] hover:border-cyan-400/70 hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1 hover:bg-[#1c1c1f]"
-                            onClick={() => handleToggleEvent(event._id)}
+                            key={event._id}
+                            className="relative flex items-start ml-4 sm:ml-8 group"
                           >
-                            <div className="flex justify-between items-center">
-                              <h3
-                                className="text-lg sm:text-xl font-bold text-white special-font"
-                                dangerouslySetInnerHTML={{
-                                  __html: formatSpecialTitle(event.title),
-                                }}
-                              ></h3>
-                              <div
-                                className={`transform transition-transform duration-500 ease-out text-cyan-400 ${
-                                  expandedEvent === event._id
-                                    ? "rotate-180"
-                                    : ""
-                                }`}
-                              >
-                                <Icon
-                                  path="M19.5 8.25l-7.5 7.5-7.5-7.5"
-                                  className="w-6 h-6"
-                                />
-                              </div>
+                            <div className="absolute -left-8 -ml-[1.1rem] mt-3 z-10">
+                              <div className="w-3 h-3 bg-cyan-400 rounded-full transition-all duration-300 group-hover:scale-125 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.7)] animate-pulse group-hover:animate-none"></div>
                             </div>
-                            <div
-                              className={`grid transition-all duration-700 ease-in-out ${
-                                expandedEvent === event._id
-                                  ? "grid-rows-[1fr] opacity-100 pt-6"
-                                  : "grid-rows-[0fr] opacity-0"
-                              }`}
-                            >
-                              <div className="overflow-hidden">
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                                  <div className="relative w-full h-48 md:h-full rounded-lg overflow-hidden border border-white/[0.1]">
-                                    <img
-                                      src={event.image}
-                                      alt={event.title}
-                                      className="w-full h-full object-cover"
-                                    />
-                                    <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                            <BentoTilt className="w-full">
+                              <div
+                                className="bg-[#131315] rounded-2xl p-4 sm:p-6 w-full cursor-pointer transition-all duration-300 border border-white/[0.1] hover:border-cyan-400/70 hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1 hover:bg-[#1c1c1f]"
+                                onClick={() => handleToggleEvent(event._id)}
+                              >
+                                <div className="flex justify-between items-center">
+                                  <div className="flex items-center gap-3">
+                                    <h3
+                                      className="text-lg sm:text-xl font-bold text-white special-font"
+                                      dangerouslySetInnerHTML={{
+                                        __html: formatSpecialTitle(event.title),
+                                      }}
+                                    ></h3>
+                                    <span className={`text-xs px-2 py-1 rounded-full border ${
+                                      event.eventType === 'technical' 
+                                        ? 'bg-blue-600/20 text-blue-400 border-blue-500/30' 
+                                        : 'bg-green-600/20 text-green-400 border-green-500/30'
+                                    }`}>
+                                      {event.eventType === 'technical' ? 'Technical' : 'Non-Technical'}
+                                    </span>
                                   </div>
-                                  <div className="md:col-span-2 space-y-4">
-                                    <div className="space-y-3 text-gray-300 leading-relaxed">
-                                      <p>{event.details.description}</p>
-                                      <div className="flex items-center gap-3">
-                                        <Icon path="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
-                                        <span>{event.details.venue}</span>
+                                  <div
+                                    className={`transform transition-transform duration-500 ease-out text-cyan-400 ${
+                                      expandedEvent === event._id
+                                        ? "rotate-180"
+                                        : ""
+                                    }`}
+                                  >
+                                    <Icon
+                                      path="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                                      className="w-6 h-6"
+                                    />
+                                  </div>
+                                </div>
+                                <div
+                                  className={`grid transition-all duration-700 ease-in-out ${
+                                    expandedEvent === event._id
+                                      ? "grid-rows-[1fr] opacity-100 pt-6"
+                                      : "grid-rows-[0fr] opacity-0"
+                                  }`}
+                                >
+                                  <div className="overflow-hidden">
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                                      <div className="relative w-full h-48 md:h-full rounded-lg overflow-hidden border border-white/[0.1]">
+                                        <img
+                                          src={event.image}
+                                          alt={event.title}
+                                          className="w-full h-full object-cover"
+                                        />
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                       </div>
-                                      <div className="flex items-center gap-3">
-                                        <Icon path="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0h18" />
-                                        <span>
-                                          {new Date(
-                                            event.details.date
-                                          ).toLocaleDateString("en-US", {
-                                            weekday: "long",
-                                            year: "numeric",
-                                            month: "long",
-                                            day: "numeric",
-                                          })}
-                                        </span>
+                                      <div className="md:col-span-2 space-y-4">
+                                        <div className="space-y-3 text-gray-300 leading-relaxed">
+                                          <p>{event.details.description}</p>
+                                          <div className="flex items-center gap-3">
+                                            <Icon path="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                            <span>{event.details.venue}</span>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <Icon path="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0h18" />
+                                            <span>
+                                              {new Date(
+                                                event.details.date
+                                              ).toLocaleDateString("en-US", {
+                                                weekday: "long",
+                                                year: "numeric",
+                                                month: "long",
+                                                day: "numeric",
+                                              })}
+                                            </span>
+                                          </div>
+                                          <div className="flex items-center gap-3">
+                                            <Icon path="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            <span>
+                                              {event.details.startTime} -{" "}
+                                              {event.details.endTime}
+                                            </span>
+                                          </div>
+                                        </div>
+                                        <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-2">
+                                          <ParticipantMeter
+                                            current={
+                                              event.registeredStudents.length
+                                            }
+                                            limit={event.participantLimit}
+                                          />
+                                          {event.registeredStudents.includes(
+                                            localStorage.getItem("userId")
+                                          ) ? (
+                                            <EventButton
+                                              onClick={() =>
+                                                handleUnregisterClick(
+                                                  category,
+                                                  event
+                                                )
+                                              }
+                                              className="bg-red-600 text-white hover:bg-red-500"
+                                            >
+                                              Unregister
+                                            </EventButton>
+                                          ) : event.registeredStudents.length >=
+                                            event.participantLimit ? (
+                                            <EventButton
+                                              disabled
+                                              className="bg-gray-700 text-gray-400 cursor-not-allowed"
+                                            >
+                                              Event Full
+                                            </EventButton>
+                                          ) : (
+                                            <EventButton
+                                              onClick={() =>
+                                                handleRegisterClick(category, event)
+                                              }
+                                              className="bg-cyan-500 text-black hover:bg-cyan-400"
+                                            >
+                                              Register Now
+                                            </EventButton>
+                                          )}
+                                        </div>
                                       </div>
-                                      <div className="flex items-center gap-3">
-                                        <Icon path="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        <span>
-                                          {event.details.startTime} -{" "}
-                                          {event.details.endTime}
-                                        </span>
-                                      </div>
-                                    </div>
-                                    <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-2">
-                                      <ParticipantMeter
-                                        current={
-                                          event.registeredStudents.length
-                                        }
-                                        limit={event.participantLimit}
-                                      />
-                                      {event.registeredStudents.includes(
-                                        localStorage.getItem("userId")
-                                      ) ? (
-                                        <EventButton
-                                          onClick={() =>
-                                            handleUnregisterClick(
-                                              category,
-                                              event
-                                            )
-                                          }
-                                          className="bg-red-600 text-white hover:bg-red-500"
-                                        >
-                                          Unregister
-                                        </EventButton>
-                                      ) : event.registeredStudents.length >=
-                                        event.participantLimit ? (
-                                        <EventButton
-                                          disabled
-                                          className="bg-gray-700 text-gray-400 cursor-not-allowed"
-                                        >
-                                          Event Full
-                                        </EventButton>
-                                      ) : (
-                                        <EventButton
-                                          onClick={() =>
-                                            handleRegisterClick(category, event)
-                                          }
-                                          className="bg-cyan-500 text-black hover:bg-cyan-400"
-                                        >
-                                          Register Now
-                                        </EventButton>
-                                      )}
                                     </div>
                                   </div>
                                 </div>
                               </div>
+                            </BentoTilt>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Subcategories */}
+                {category.subcategories &&
+                  category.subcategories.length > 0 && (
+                    <div className="space-y-12">
+                      {category.subcategories
+                        .sort((a, b) => a.subcategoryName.localeCompare(b.subcategoryName))
+                        .map((subcategory) => (
+                        <div
+                          key={subcategory._id}
+                          className=" rounded-2xl p-6 "
+                        >
+                          <div className="mb-6">
+                            <h4 className="text-lg font-semibold text-cyan-300">
+                              {subcategory.subcategoryName}
+                            </h4>
+                          </div>
+                          <div className="relative">
+                            <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-white/[0.08]"></div>
+                            <div className="space-y-8">
+                              {subcategory.Events
+                                .sort((a, b) => a.title.localeCompare(b.title))
+                                .map((event) => (
+                                <div
+                                  key={event._id}
+                                  className="relative flex items-start ml-4 sm:ml-8 group"
+                                >
+                                  <div className="absolute -left-8 -ml-[1.1rem] mt-3 z-10">
+                                    <div className="w-3 h-3 bg-cyan-400 rounded-full transition-all duration-300 group-hover:scale-125 group-hover:shadow-[0_0_15px_rgba(56,189,248,0.7)] animate-pulse group-hover:animate-none"></div>
+                                  </div>
+                                  <BentoTilt className="w-full">
+                                    <div
+                                      className="bg-[#131315] rounded-2xl p-4 sm:p-6 w-full cursor-pointer transition-all duration-300 border border-white/[0.1] hover:border-cyan-400/70 hover:shadow-2xl hover:shadow-cyan-500/10 hover:-translate-y-1 hover:bg-[#1c1c1f]"
+                                      onClick={() =>
+                                        handleToggleEvent(event._id)
+                                      }
+                                    >
+                                      <div className="flex justify-between items-center">
+                                        <div className="flex items-center gap-3">
+                                          <h3
+                                            className="text-lg sm:text-xl font-bold text-white special-font"
+                                            dangerouslySetInnerHTML={{
+                                              __html: formatSpecialTitle(
+                                                event.title
+                                              ),
+                                            }}
+                                          ></h3>
+                                          <span className={`text-xs px-2 py-1 rounded-full border ${
+                                            event.eventType === 'technical' 
+                                              ? 'bg-blue-600/20 text-blue-400 border-blue-500/30' 
+                                              : 'bg-green-600/20 text-green-400 border-green-500/30'
+                                          }`}>
+                                            {event.eventType === 'technical' ? 'Technical' : 'Non-Technical'}
+                                          </span>
+                                        </div>
+                                        <div
+                                          className={`transform transition-transform duration-500 ease-out text-cyan-400 ${
+                                            expandedEvent === event._id
+                                              ? "rotate-180"
+                                              : ""
+                                          }`}
+                                        >
+                                          <Icon
+                                            path="M19.5 8.25l-7.5 7.5-7.5-7.5"
+                                            className="w-6 h-6"
+                                          />
+                                        </div>
+                                      </div>
+                                      <div
+                                        className={`grid transition-all duration-700 ease-in-out ${
+                                          expandedEvent === event._id
+                                            ? "grid-rows-[1fr] opacity-100 pt-6"
+                                            : "grid-rows-[0fr] opacity-0"
+                                        }`}
+                                      >
+                                        <div className="overflow-hidden">
+                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                                            <div className="relative w-full h-48 md:h-full rounded-lg overflow-hidden border border-white/[0.1]">
+                                              <img
+                                                src={event.image}
+                                                alt={event.title}
+                                                className="w-full h-full object-cover"
+                                              />
+                                              <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
+                                            </div>
+                                            <div className="md:col-span-2 space-y-4">
+                                              <div className="space-y-3 text-gray-300 leading-relaxed">
+                                                <p>
+                                                  {event.details.description}
+                                                </p>
+                                                <div className="flex items-center gap-3">
+                                                  <Icon path="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" />
+                                                  <span>
+                                                    {event.details.venue}
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                  <Icon path="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0h18" />
+                                                  <span>
+                                                    {new Date(
+                                                      event.details.date
+                                                    ).toLocaleDateString(
+                                                      "en-US",
+                                                      {
+                                                        weekday: "long",
+                                                        year: "numeric",
+                                                        month: "long",
+                                                        day: "numeric",
+                                                      }
+                                                    )}
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center gap-3">
+                                                  <Icon path="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                                  <span>
+                                                    {event.details.startTime} -{" "}
+                                                    {event.details.endTime}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                              <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pt-2">
+                                                <ParticipantMeter
+                                                  current={
+                                                    event.registeredStudents
+                                                      .length
+                                                  }
+                                                  limit={event.participantLimit}
+                                                />
+                                                {event.registeredStudents.includes(
+                                                  localStorage.getItem("userId")
+                                                ) ? (
+                                                  <EventButton
+                                                    onClick={() =>
+                                                      handleUnregisterClick(
+                                                        category,
+                                                        event,
+                                                        subcategory
+                                                      )
+                                                    }
+                                                    className="bg-red-600 text-white hover:bg-red-500"
+                                                  >
+                                                    Unregister
+                                                  </EventButton>
+                                                ) : event.registeredStudents
+                                                    .length >=
+                                                  event.participantLimit ? (
+                                                  <EventButton
+                                                    disabled
+                                                    className="bg-gray-700 text-gray-400 cursor-not-allowed"
+                                                  >
+                                                    Event Full
+                                                  </EventButton>
+                                                ) : (
+                                                  <EventButton
+                                                    onClick={() =>
+                                                      handleRegisterClick(
+                                                        category,
+                                                        event,
+                                                        subcategory
+                                                      )
+                                                    }
+                                                    className="bg-cyan-500 text-black hover:bg-cyan-400"
+                                                  >
+                                                    Register Now
+                                                  </EventButton>
+                                                )}
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </BentoTilt>
+                                </div>
+                              ))}
                             </div>
                           </div>
-                        </BentoTilt>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
               </div>
             </div>
           ))
@@ -522,7 +825,7 @@ const Events = () => {
               }}
             ></h3>
             <p className="text-gray-500 mt-2">
-              Try adjusting your search terms.
+              No events or subcategories found. Try adjusting your search terms or filters.
             </p>
           </div>
         )}
