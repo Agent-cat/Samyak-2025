@@ -22,11 +22,11 @@ export const sendOTPEmail = async (email, otp) => {
         const mailOptions = {
             from: process.env.EMAIL_USER,
             to: email,
-            subject: 'Email Verification - Surabhi Fest By Kl University',
+            subject: 'Email Verification - Samyak Fest By Kl University',
             html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #6b46c1;">Verify Your Email</h2>
-          <p> Your OTP for Email Verification to register in Surabhi fest is:</p>
+          <p> Your OTP for Email Verification to register in samyak fest is:</p>
           <h1 style="color: #6b46c1; font-size: 32px; letter-spacing: 5px; margin: 20px 0;">${otp}</h1>
           <p>This OTP will expire in 10 minutes.</p>
           <p>If you didn't request this verification, please ignore this email.</p>
@@ -59,7 +59,7 @@ export const sendEmailWithAttachment = async (email, qrCodeDataUrl) => {
             to: email,
             subject: 'Your Registration QR Code',
             html: `
-        <p>Thank you for registering for KL SURABHI. </p> 
+        <p>Thank you for registering for KL SAMYAK. </p> 
         <h1>Note: Please present this QR code at the gate for entry into the college on March 7 and 8.</h1>
         <p>Your QR code is attached below </p>
       `,

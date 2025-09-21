@@ -37,10 +37,16 @@ export const getAllEvents = async (req, res) => {
 
     
     console.log("Fetching events from database.");
-    const events = await Event.find().populate({
-      path: "Events.registeredStudents",
-      select: "fullName email college collegeId",
-    });
+    const events = await Event.find().populate([
+      {
+        path: "Events.registeredStudents",
+        select: "fullName email college collegeId",
+      },
+      {
+        path: "subcategories.Events.registeredStudents",
+        select: "fullName email college collegeId",
+      }
+    ]);
 
     
     await redisClient.setex(CACHE_KEY, CACHE_DURATION, JSON.stringify(events));
@@ -131,7 +137,10 @@ export const registerForEvent = async (req, res) => {
 
  
     const registeredEvents = await Event.find({
-      "Events.registeredStudents": userId,
+      $or: [
+        { "Events.registeredStudents": userId },
+        { "subcategories.Events.registeredStudents": userId }
+      ]
     });
 
 
@@ -139,6 +148,7 @@ export const registerForEvent = async (req, res) => {
     const newEventStart = event.details.startTime;
     const newEventEnd = event.details.endTime;
     for (const cat of registeredEvents) {
+      // Check direct events
       for (const registeredEvent of cat.Events) {
         if (registeredEvent.registeredStudents.includes(userId)) {
           const registeredEventDate = registeredEvent.details.date;
@@ -158,6 +168,32 @@ export const registerForEvent = async (req, res) => {
                 endTime: registeredEventEnd,
               }
             });
+          }
+        }
+      }
+      
+      // Check subcategory events
+      for (const subcat of cat.subcategories || []) {
+        for (const registeredEvent of subcat.Events) {
+          if (registeredEvent.registeredStudents.includes(userId)) {
+            const registeredEventDate = registeredEvent.details.date;
+            const registeredEventStart = registeredEvent.details.startTime;
+            const registeredEventEnd = registeredEvent.details.endTime;
+
+            if (
+              registeredEventDate === newEventDate &&
+              (newEventStart < registeredEventEnd && newEventEnd > registeredEventStart)
+            ) {
+              return res.status(400).json({
+                message: "Time conflict: You are already registered for another event at this time",
+                conflictingEvent: {
+                  title: registeredEvent.title,
+                  date: registeredEventDate,
+                  startTime: registeredEventStart,
+                  endTime: registeredEventEnd,
+                }
+              });
+            }
           }
         }
       }
@@ -289,6 +325,7 @@ export const updateEventInCategory = async (req, res) => {
       image: req.body.image,
       termsandconditions: req.body.termsandconditions,
       participantLimit: req.body.participantLimit,
+      eventType: req.body.eventType,
     });
 
     await category.save();
@@ -364,5 +401,325 @@ export const deleteEventInCategory = async (req, res) => {
     res.status(200).json({ message: "Event deleted successfully" });
   } catch (error) {
     res.status(500).json({ message: error.message });
+  }
+};
+
+// Subcategory functions
+export const createSubcategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { subcategoryName } = req.body;
+
+    if (!subcategoryName) {
+      return res.status(400).json({ message: "Subcategory name is required" });
+    }
+
+    const category = await Event.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    // Check if subcategory already exists
+    const existingSubcategory = category.subcategories.find(
+      (sub) => sub.subcategoryName === subcategoryName
+    );
+    if (existingSubcategory) {
+      return res.status(400).json({ message: "Subcategory already exists" });
+    }
+
+    category.subcategories.push({
+      subcategoryName,
+      Events: [],
+    });
+
+    await category.save();
+    await clearEventsCache();
+    res.status(201).json(category);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const deleteSubcategory = async (req, res) => {
+  try {
+    const { categoryId, subcategoryId } = req.params;
+
+    const category = await Event.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    const subcategoryIndex = category.subcategories.findIndex(
+      (sub) => sub._id.toString() === subcategoryId
+    );
+    if (subcategoryIndex === -1) {
+      return res.status(404).json({ message: "Subcategory not found" });
+    }
+
+    category.subcategories.splice(subcategoryIndex, 1);
+    await category.save();
+
+    await clearEventsCache();
+    res.status(200).json({ message: "Subcategory deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Subcategory event functions
+export const createEventInSubcategory = async (req, res) => {
+  try {
+    const { categoryId, subcategoryId } = req.params;
+    const category = await Event.findById(categoryId);
+
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    const subcategory = category.subcategories.find(
+      (sub) => sub._id.toString() === subcategoryId
+    );
+    if (!subcategory) {
+      return res.status(404).json({ message: "Subcategory not found" });
+    }
+
+    const maxEventId = Math.max(...subcategory.Events.map((e) => e.eventId), 0);
+    const newEventId = maxEventId + 1;
+
+    subcategory.Events.push({
+      title: req.body.title,
+      eventId: newEventId,
+      details: req.body.details,
+      image: req.body.image,
+      termsandconditions: req.body.termsandconditions,
+      registeredStudents: [],
+      participantLimit: req.body.participantLimit || 100,
+    });
+
+    await category.save();
+    await clearEventsCache();
+    res.status(201).json(category);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const updateEventInSubcategory = async (req, res) => {
+  try {
+    const { categoryId, subcategoryId, eventId } = req.params;
+    const category = await Event.findById(categoryId);
+
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    const subcategory = category.subcategories.find(
+      (sub) => sub._id.toString() === subcategoryId
+    );
+    if (!subcategory) {
+      return res.status(404).json({ message: "Subcategory not found" });
+    }
+
+    const event = subcategory.Events.find((e) => e._id.toString() === eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    Object.assign(event, {
+      title: req.body.title,
+      details: req.body.details,
+      image: req.body.image,
+      termsandconditions: req.body.termsandconditions,
+      participantLimit: req.body.participantLimit,
+      eventType: req.body.eventType,
+    });
+
+    await category.save();
+    await clearEventsCache();
+    res.status(200).json(category);
+  } catch (error) {
+    res.status(400).json({ message: error.message });
+  }
+};
+
+export const deleteEventInSubcategory = async (req, res) => {
+  try {
+    const { categoryId, subcategoryId, eventId } = req.params;
+
+    const category = await Event.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    const subcategory = category.subcategories.find(
+      (sub) => sub._id.toString() === subcategoryId
+    );
+    if (!subcategory) {
+      return res.status(404).json({ message: "Subcategory not found" });
+    }
+
+    const eventIndex = subcategory.Events.findIndex(
+      (event) => event._id.toString() === eventId
+    );
+    if (eventIndex === -1) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    subcategory.Events.splice(eventIndex, 1);
+    await category.save();
+
+    await clearEventsCache();
+    res.status(200).json({ message: "Event deleted successfully" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const registerForSubcategoryEvent = async (req, res) => {
+  try {
+    const { categoryId, subcategoryId, eventId } = req.params;
+    const userId = req.user._id;
+
+    const category = await Event.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    const subcategory = category.subcategories.find(
+      (sub) => sub._id.toString() === subcategoryId
+    );
+    if (!subcategory) {
+      return res.status(404).json({ message: "Subcategory not found" });
+    }
+
+    const event = subcategory.Events.find((e) => e._id.toString() === eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (event.registeredStudents.includes(userId)) {
+      return res
+        .status(400)
+        .json({ message: "Already registered for this event" });
+    }
+
+    if (event.registeredStudents.length >= event.participantLimit) {
+      return res
+        .status(400)
+        .json({ message: "Event has reached maximum participants limit" });
+    }
+
+    // Check for time conflicts (same logic as regular events)
+    const registeredEvents = await Event.find({
+      $or: [
+        { "Events.registeredStudents": userId },
+        { "subcategories.Events.registeredStudents": userId }
+      ]
+    });
+
+    const newEventDate = event.details.date;
+    const newEventStart = event.details.startTime;
+    const newEventEnd = event.details.endTime;
+
+    for (const cat of registeredEvents) {
+      // Check direct events
+      for (const registeredEvent of cat.Events) {
+        if (registeredEvent.registeredStudents.includes(userId)) {
+          const registeredEventDate = registeredEvent.details.date;
+          const registeredEventStart = registeredEvent.details.startTime;
+          const registeredEventEnd = registeredEvent.details.endTime;
+
+          if (
+            registeredEventDate === newEventDate &&
+            (newEventStart < registeredEventEnd && newEventEnd > registeredEventStart)
+          ) {
+            return res.status(400).json({
+              message: "Time conflict: You are already registered for another event at this time",
+              conflictingEvent: {
+                title: registeredEvent.title,
+                date: registeredEventDate,
+                startTime: registeredEventStart,
+                endTime: registeredEventEnd,
+              }
+            });
+          }
+        }
+      }
+
+      // Check subcategory events
+      for (const sub of cat.subcategories) {
+        for (const registeredEvent of sub.Events) {
+          if (registeredEvent.registeredStudents.includes(userId)) {
+            const registeredEventDate = registeredEvent.details.date;
+            const registeredEventStart = registeredEvent.details.startTime;
+            const registeredEventEnd = registeredEvent.details.endTime;
+
+            if (
+              registeredEventDate === newEventDate &&
+              (newEventStart < registeredEventEnd && newEventEnd > registeredEventStart)
+            ) {
+              return res.status(400).json({
+                message: "Time conflict: You are already registered for another event at this time",
+                conflictingEvent: {
+                  title: registeredEvent.title,
+                  date: registeredEventDate,
+                  startTime: registeredEventStart,
+                  endTime: registeredEventEnd,
+                }
+              });
+            }
+          }
+        }
+      }
+    }
+
+    event.registeredStudents.push(userId);
+    await category.save();
+
+    await clearEventsCache();
+    res.status(200).json({ message: "Successfully registered for event" });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+export const unregisterFromSubcategoryEvent = async (req, res) => {
+  try {
+    const { categoryId, subcategoryId, eventId } = req.params;
+    const userId = req.user._id;
+
+    const category = await Event.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: "Category not found" });
+    }
+
+    const subcategory = category.subcategories.find(
+      (sub) => sub._id.toString() === subcategoryId
+    );
+    if (!subcategory) {
+      return res.status(404).json({ message: "Subcategory not found" });
+    }
+
+    const event = subcategory.Events.find((e) => e._id.toString() === eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Event not found" });
+    }
+
+    if (!event.registeredStudents.includes(userId)) {
+      return res
+        .status(400)
+        .json({ message: "Not registered for this event" });
+    }
+
+    event.registeredStudents = event.registeredStudents.filter(
+      (id) => id.toString() !== userId.toString()
+    );
+
+    await category.save();
+
+    await clearEventsCache();
+    res.status(200).json({ message: "Successfully unregistered from event" });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
 };

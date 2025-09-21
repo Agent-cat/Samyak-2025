@@ -17,6 +17,13 @@ import {
   deleteCategory,
   deleteEventInCategory,
   getRegisteredEvents,
+  createSubcategory,
+  deleteSubcategory,
+  createEventInSubcategory,
+  updateEventInSubcategory,
+  deleteEventInSubcategory,
+  registerForSubcategoryEvent,
+  unregisterFromSubcategoryEvent,
 } from "../controllers/events.controller.js";
 
 const router = express.Router();
@@ -65,10 +72,23 @@ router.delete("/:id", deleteEvent);
 
 router.post("/category", createCategory);
 router.delete("/category/:categoryId", deleteCategory);
+
+// Subcategory routes
+router.post("/category/:categoryId/subcategory", createSubcategory);
+router.delete("/category/:categoryId/subcategory/:subcategoryId", deleteSubcategory);
+
+// Event routes (both direct and subcategory)
 router.post("/:categoryId/events", createEventInCategory);
 router.put("/:categoryId/events/:eventId", updateEventInCategory);
 router.delete("/:categoryId/events/:eventId", deleteEventInCategory);
 router.post("/:categoryId/events/:eventId/register", protect, registerForEvent);
 router.delete("/:categoryId/events/:eventId/unregister", protect, unregisterFromEvent);
+
+// Subcategory event routes
+router.post("/:categoryId/subcategory/:subcategoryId/events", createEventInSubcategory);
+router.put("/:categoryId/subcategory/:subcategoryId/events/:eventId", updateEventInSubcategory);
+router.delete("/:categoryId/subcategory/:subcategoryId/events/:eventId", deleteEventInSubcategory);
+router.post("/:categoryId/subcategory/:subcategoryId/events/:eventId/register", protect, registerForSubcategoryEvent);
+router.delete("/:categoryId/subcategory/:subcategoryId/events/:eventId/unregister", protect, unregisterFromSubcategoryEvent);
 
 export default router;

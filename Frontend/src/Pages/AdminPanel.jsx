@@ -67,6 +67,7 @@ const EventModal = React.memo(
           <form onSubmit={handleEventSubmit} className="p-6 space-y-4">
             <h3 className="text-2xl font-bold text-purple-400 pr-8 mb-4">
               {editingEvent ? "Edit Event" : "Add New Event"}
+              {selectedSubcategory && " (Subcategory)"}
             </h3>
 
             <div className="space-y-4">
@@ -187,6 +188,26 @@ const EventModal = React.memo(
                   className="w-full bg-gray-700 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
                   required
                 />
+              </div>
+
+              <div>
+                <label className="block text-purple-300 mb-2">
+                  Event Type
+                </label>
+                <select
+                  value={eventForm.eventType}
+                  onChange={(e) =>
+                    setEventForm({
+                      ...eventForm,
+                      eventType: e.target.value,
+                    })
+                  }
+                  className="w-full bg-gray-700 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                >
+                  <option value="technical">Technical</option>
+                  <option value="non-technical">Non-Technical</option>
+                </select>
               </div>
 
               <div>
@@ -487,7 +508,9 @@ const AdminPanel = () => {
   const [view, setView] = useState("registrations");
   const [showEventModal, setShowEventModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [editingEvent, setEditingEvent] = useState(null);
   const [eventForm, setEventForm] = useState({
     title: "",
@@ -499,9 +522,13 @@ const AdminPanel = () => {
     image: "",
     termsandconditions: "",
     participantLimit: "",
+    eventType: "technical",
   });
   const [categoryForm, setCategoryForm] = useState({
     categoryName: "",
+  });
+  const [subcategoryForm, setSubcategoryForm] = useState({
+    subcategoryName: "",
   });
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [expandedEvents, setExpandedEvents] = useState(new Set());
@@ -518,6 +545,7 @@ const AdminPanel = () => {
       image: "",
       termsandconditions: "",
       participantLimit: "",
+      eventType: "technical",
     });
     setEditingEvent(null);
   }, []);
@@ -654,21 +682,41 @@ const AdminPanel = () => {
           image: eventForm.image,
           termsandconditions: eventForm.termsandconditions,
           participantLimit: eventForm.participantLimit,
+          eventType: eventForm.eventType,
         };
 
-        const response = await fetch(
-          editingEvent
-            ? `${url}/api/events/${selectedCategory}/events/${editingEvent._id}`
-            : `${url}/api/events/${selectedCategory}/events`,
-          {
-            method: editingEvent ? "PUT" : "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${localStorage.getItem("token")}`,
-            },
-            body: JSON.stringify(eventData),
-          }
-        );
+        let response;
+        if (selectedSubcategory) {
+          // Subcategory event
+          response = await fetch(
+            editingEvent
+              ? `${url}/api/events/${selectedCategory}/subcategory/${selectedSubcategory}/events/${editingEvent._id}`
+              : `${url}/api/events/${selectedCategory}/subcategory/${selectedSubcategory}/events`,
+            {
+              method: editingEvent ? "PUT" : "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              body: JSON.stringify(eventData),
+            }
+          );
+        } else {
+          // Regular category event
+          response = await fetch(
+            editingEvent
+              ? `${url}/api/events/${selectedCategory}/events/${editingEvent._id}`
+              : `${url}/api/events/${selectedCategory}/events`,
+            {
+              method: editingEvent ? "PUT" : "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${localStorage.getItem("token")}`,
+              },
+              body: JSON.stringify(eventData),
+            }
+          );
+        }
 
         if (!response.ok) {
           throw new Error("Failed to save event");
@@ -684,8 +732,9 @@ const AdminPanel = () => {
     [eventForm, selectedCategory, editingEvent, closeEventModal]
   );
 
-  const handleAddEvent = useCallback((categoryId) => {
+  const handleAddEvent = useCallback((categoryId, subcategoryId = null) => {
     setSelectedCategory(categoryId);
+    setSelectedSubcategory(subcategoryId);
     setEditingEvent(null);
     setEventForm({
       title: "",
@@ -697,17 +746,19 @@ const AdminPanel = () => {
       image: "",
       termsandconditions: "",
       participantLimit: "",
+      eventType: "technical",
     });
     setShowEventModal(true);
   }, []);
 
-  const handleEditEvent = useCallback((category, event) => {
+  const handleEditEvent = useCallback((category, event, subcategory = null) => {
     if (!category || !event) {
       console.error("Category or event data is missing");
       return;
     }
 
     setSelectedCategory(category._id);
+    setSelectedSubcategory(subcategory ? subcategory._id : null);
     setEditingEvent(event);
     setEventForm({
       title: event.title,
@@ -719,6 +770,7 @@ const AdminPanel = () => {
       image: event.image,
       termsandconditions: event.termsandconditions,
       participantLimit: event.participantLimit,
+      eventType: event.eventType || "technical",
     });
     setShowEventModal(true);
   }, []);
@@ -728,6 +780,70 @@ const AdminPanel = () => {
     document.body.style.overflow = "hidden";
     setShowCategoryModal(true);
   };
+
+  const handleAddSubcategory = (categoryId) => {
+    setSelectedCategory(categoryId);
+    setSubcategoryForm({ subcategoryName: "" });
+    setShowSubcategoryModal(true);
+  };
+
+  const handleSubcategorySubmit = useCallback(
+    async (e) => {
+      e.preventDefault();
+
+      try {
+        const response = await fetch(`${url}/api/events/category/${selectedCategory}/subcategory`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+          body: JSON.stringify(subcategoryForm),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.message || "Failed to create subcategory");
+        }
+
+        await fetchEvents();
+        setShowSubcategoryModal(false);
+        setSubcategoryForm({ subcategoryName: "" });
+      } catch (error) {
+        console.error("Error creating subcategory:", error);
+        alert(error.message || "Failed to create subcategory. Please try again.");
+      }
+    },
+    [subcategoryForm, selectedCategory, fetchEvents]
+  );
+
+  const handleDeleteSubcategory = useCallback(async (categoryId, subcategoryId) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to delete this subcategory? All events in this subcategory will be deleted."
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${url}/api/events/category/${categoryId}/subcategory/${subcategoryId}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to delete subcategory");
+      }
+
+      await fetchEvents();
+    } catch (error) {
+      console.error("Error deleting subcategory:", error);
+      alert("Failed to delete subcategory. Please try again.");
+    }
+  }, [fetchEvents]);
 
   const handleCategorySubmit = useCallback(
     async (e) => {
@@ -1118,6 +1234,12 @@ const AdminPanel = () => {
                       Add Event
                     </button>
                     <button
+                      className="px-4 py-2 bg-blue-500 rounded-lg text-white hover:bg-blue-600"
+                      onClick={() => handleAddSubcategory(category._id)}
+                    >
+                      Add Subcategory
+                    </button>
+                    <button
                       className="px-4 py-2 bg-red-500 rounded-lg text-white hover:bg-red-600"
                       onClick={() => handleDeleteCategory(category._id)}
                     >
@@ -1126,106 +1248,257 @@ const AdminPanel = () => {
                   </div>
                 </div>
 
-                <div className="space-y-4">
-                  {category.Events.map((event) => (
-                    <div
-                      key={event._id}
-                      className="bg-gray-800 rounded-lg overflow-hidden transition-all duration-300"
-                    >
-                      {/* Event Header - Always Visible */}
-                      <div
-                        className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-700"
-                        onClick={() => toggleEventExpansion(event._id)}
-                      >
-                        <div className="flex items-center space-x-4">
-                          <h4 className="text-xl font-semibold text-white">
-                            {event.title}
-                          </h4>
-                          <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm">
-                            Registrations:{" "}
-                            {event.registeredStudents?.length || 0}
-                          </span>
-                        </div>
-                        {expandedEvents.has(event._id) ? (
-                          <IoChevronUp className="text-2xl text-purple-400" />
-                        ) : (
-                          <IoChevronDown className="text-2xl text-purple-400" />
-                        )}
-                      </div>
-
-                      {expandedEvents.has(event._id) && (
-                        <div className="p-4 border-t border-gray-700 bg-gray-750">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-                            <div className="space-y-2">
-                              <p className="text-gray-300">
-                                <span className="font-semibold text-purple-400">
-                                  Description:
-                                </span>{" "}
-                                {event.details.description}
-                              </p>
-                              <p className="text-gray-300">
-                                <span className="font-semibold text-purple-400">
-                                  Venue:
-                                </span>{" "}
-                                {event.details.venue}
-                              </p>
+                {/* Direct Events */}
+                {category.Events && category.Events.length > 0 && (
+                  <div className="mb-6">
+                    <h4 className="text-lg font-semibold text-purple-300 mb-4">Direct Events</h4>
+                    <div className="space-y-4">
+                      {category.Events.map((event) => (
+                        <div
+                          key={event._id}
+                          className="bg-gray-800 rounded-lg overflow-hidden transition-all duration-300"
+                        >
+                          {/* Event Header - Always Visible */}
+                          <div
+                            className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-700"
+                            onClick={() => toggleEventExpansion(event._id)}
+                          >
+                            <div className="flex items-center space-x-4">
+                              <h4 className="text-xl font-semibold text-white">
+                                {event.title}
+                              </h4>
+                              <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm">
+                                Registrations:{" "}
+                                {event.registeredStudents?.length || 0}
+                              </span>
                             </div>
-                            <div className="space-y-2">
-                              <p className="text-gray-300">
-                                <span className="font-semibold text-purple-400">
-                                  Date:
-                                </span>{" "}
-                                {event.details.date}
-                              </p>
-                              <p className="text-gray-300">
-                                <span className="font-semibold text-purple-400">
-                                  Start Time:
-                                </span>{" "}
-                                {event.details.startTime}
-                              </p>
-                              <p className="text-gray-300">
-                                <span className="font-semibold text-purple-400">
-                                  End Time:
-                                </span>{" "}
-                                {event.details.endTime}
-                              </p>
-                            </div>
+                            {expandedEvents.has(event._id) ? (
+                              <IoChevronUp className="text-2xl text-purple-400" />
+                            ) : (
+                              <IoChevronDown className="text-2xl text-purple-400" />
+                            )}
                           </div>
 
-                          <div className="flex justify-end space-x-3">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleViewRegistrations(event);
-                              }}
-                              className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors duration-200"
-                            >
-                              View Registrations
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleEditEvent(category, event);
-                              }}
-                              className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleDeleteEvent(category._id, event._id);
-                              }}
-                              className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                          {expandedEvents.has(event._id) && (
+                            <div className="p-4 border-t border-gray-700 bg-gray-750">
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                <div className="space-y-2">
+                                  <p className="text-gray-300">
+                                    <span className="font-semibold text-purple-400">
+                                      Description:
+                                    </span>{" "}
+                                    {event.details.description}
+                                  </p>
+                                  <p className="text-gray-300">
+                                    <span className="font-semibold text-purple-400">
+                                      Venue:
+                                    </span>{" "}
+                                    {event.details.venue}
+                                  </p>
+                                </div>
+                                <div className="space-y-2">
+                                  <p className="text-gray-300">
+                                    <span className="font-semibold text-purple-400">
+                                      Date:
+                                    </span>{" "}
+                                    {event.details.date}
+                                  </p>
+                                  <p className="text-gray-300">
+                                    <span className="font-semibold text-purple-400">
+                                      Start Time:
+                                    </span>{" "}
+                                    {event.details.startTime}
+                                  </p>
+                                  <p className="text-gray-300">
+                                    <span className="font-semibold text-purple-400">
+                                      End Time:
+                                    </span>{" "}
+                                    {event.details.endTime}
+                                  </p>
+                                </div>
+                              </div>
+
+                              <div className="flex justify-end space-x-3">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleViewRegistrations(event);
+                                  }}
+                                  className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors duration-200"
+                                >
+                                  View Registrations
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleEditEvent(category, event);
+                                  }}
+                                  className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDeleteEvent(category._id, event._id);
+                                  }}
+                                  className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </div>
+                          )}
                         </div>
-                      )}
+                      ))}
                     </div>
-                  ))}
-                </div>
+                  </div>
+                )}
+
+                {/* Subcategories */}
+                {category.subcategories && category.subcategories.length > 0 && (
+                  <div>
+                    <h4 className="text-lg font-semibold text-purple-300 mb-4">Subcategories</h4>
+                    <div className="space-y-6">
+                      {category.subcategories.map((subcategory) => (
+                        <div key={subcategory._id} className="bg-gray-800/50 rounded-lg p-4 border border-purple-700">
+                          <div className="flex items-center justify-between mb-4">
+                            <h5 className="text-lg font-semibold text-purple-300">
+                              {subcategory.subcategoryName}
+                            </h5>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleAddEvent(category._id, subcategory._id)}
+                                className="px-3 py-1 bg-purple-500 rounded text-white hover:bg-purple-600 text-sm"
+                              >
+                                Add Event
+                              </button>
+                              <button
+                                onClick={() => handleDeleteSubcategory(category._id, subcategory._id)}
+                                className="px-3 py-1 bg-red-500 rounded text-white hover:bg-red-600 text-sm"
+                              >
+                                Delete Subcategory
+                              </button>
+                            </div>
+                          </div>
+                          <div className="space-y-4">
+                            {subcategory.Events.map((event) => (
+                              <div
+                                key={event._id}
+                                className="bg-gray-800 rounded-lg overflow-hidden transition-all duration-300"
+                              >
+                                {/* Event Header - Always Visible */}
+                                <div
+                                  className="p-4 flex justify-between items-center cursor-pointer hover:bg-gray-700"
+                                  onClick={() => toggleEventExpansion(event._id)}
+                                >
+                                  <div className="flex items-center space-x-4">
+                                    <h4 className="text-xl font-semibold text-white">
+                                      {event.title}
+                                    </h4>
+                                    <span className="bg-purple-500 text-white px-3 py-1 rounded-full text-sm">
+                                      Registrations:{" "}
+                                      {event.registeredStudents?.length || 0}
+                                    </span>
+                                  </div>
+                                  {expandedEvents.has(event._id) ? (
+                                    <IoChevronUp className="text-2xl text-purple-400" />
+                                  ) : (
+                                    <IoChevronDown className="text-2xl text-purple-400" />
+                                  )}
+                                </div>
+
+                                {expandedEvents.has(event._id) && (
+                                  <div className="p-4 border-t border-gray-700 bg-gray-750">
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                                      <div className="space-y-2">
+                                        <p className="text-gray-300">
+                                          <span className="font-semibold text-purple-400">
+                                            Description:
+                                          </span>{" "}
+                                          {event.details.description}
+                                        </p>
+                                        <p className="text-gray-300">
+                                          <span className="font-semibold text-purple-400">
+                                            Venue:
+                                          </span>{" "}
+                                          {event.details.venue}
+                                        </p>
+                                      </div>
+                                      <div className="space-y-2">
+                                        <p className="text-gray-300">
+                                          <span className="font-semibold text-purple-400">
+                                            Date:
+                                          </span>{" "}
+                                          {event.details.date}
+                                        </p>
+                                        <p className="text-gray-300">
+                                          <span className="font-semibold text-purple-400">
+                                            Start Time:
+                                          </span>{" "}
+                                          {event.details.startTime}
+                                        </p>
+                                        <p className="text-gray-300">
+                                          <span className="font-semibold text-purple-400">
+                                            End Time:
+                                          </span>{" "}
+                                          {event.details.endTime}
+                                        </p>
+                                      </div>
+                                    </div>
+
+                                    <div className="flex justify-end space-x-3">
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleViewRegistrations(event);
+                                        }}
+                                        className="px-4 py-2 bg-purple-500 text-white rounded hover:bg-purple-600 transition-colors duration-200"
+                                      >
+                                        View Registrations
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditEvent(category, event, subcategory);
+                                        }}
+                                        className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 transition-colors duration-200"
+                                      >
+                                        Edit
+                                      </button>
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleDeleteEvent(category._id, event._id, subcategory._id);
+                                        }}
+                                        className="px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600 transition-colors duration-200"
+                                      >
+                                        Delete
+                                      </button>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ))}
+                            {subcategory.Events.length === 0 && (
+                              <p className="text-center text-gray-400 py-4">
+                                No events in this subcategory.
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* No events message */}
+                {(!category.Events || category.Events.length === 0) && 
+                 (!category.subcategories || category.subcategories.length === 0) && (
+                  <p className="text-center text-gray-400 py-8">
+                    No events or subcategories in this category.
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -1247,6 +1520,69 @@ const AdminPanel = () => {
           handleCategorySubmit={handleCategorySubmit}
           closeCategoryModal={closeCategoryModal}
         />
+      )}
+      {showSubcategoryModal && (
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 overflow-y-auto">
+          <div className="bg-gray-800 rounded-xl w-full max-w-md my-8 mx-4 relative">
+            <button
+              onClick={() => setShowSubcategoryModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors duration-200"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className="h-6 w-6"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </button>
+
+            <form onSubmit={handleSubcategorySubmit} className="p-6">
+              <h3 className="text-2xl font-bold text-purple-400 pr-8 mb-4">
+                Add New Subcategory
+              </h3>
+
+              <div className="mb-6">
+                <label className="block text-purple-300 mb-2">
+                  Subcategory Name
+                </label>
+                <input
+                  type="text"
+                  value={subcategoryForm.subcategoryName}
+                  onChange={(e) =>
+                    setSubcategoryForm({ subcategoryName: e.target.value })
+                  }
+                  className="w-full bg-gray-700 rounded-lg p-2.5 text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  required
+                  placeholder="Enter subcategory name"
+                />
+              </div>
+
+              <div className="flex gap-4">
+                <button
+                  type="submit"
+                  className="flex-1 bg-purple-500 text-white px-6 py-2.5 rounded-lg transition-all duration-300 hover:bg-purple-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                >
+                  Create Subcategory
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowSubcategoryModal(false)}
+                  className="flex-1 bg-gray-600 text-white px-6 py-2.5 rounded-lg transition-all duration-300 hover:bg-gray-700 focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 focus:ring-offset-gray-800"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       )}
       {selectedEvent && (
         <EventRegistrations
