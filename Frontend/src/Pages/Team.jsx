@@ -1,7 +1,8 @@
 import React from "react";
+import CommitteeLayout from "../Components/CommitteeLayout";
 
 const Team = () => {
-  return <div className="w-full h-screen bg-black text-white"></div>;
+  return <CommitteeLayout />;
 };
 
 export default Team;

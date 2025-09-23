@@ -4,7 +4,6 @@ import { setToken, setUser } from "../utils/auth";
 import qr from "../assets/upi_qr.png";
 
 const PaymentPage = () => {
-
   const url = import.meta.env.VITE_API_URL;
   const navigate = useNavigate();
   const location = useLocation();
@@ -26,13 +25,10 @@ const PaymentPage = () => {
     formData.append("file", file);
 
     try {
-      const response = await fetch(
-        `${url}/api/users/upload`,
-        {
-          method: "POST",
-          body: formData,
-        }
-      );
+      const response = await fetch(`${url}/api/users/upload`, {
+        method: "POST",
+        body: formData,
+      });
       const data = await response.json();
       if (!response.ok) {
         throw new Error(data.error || "Upload failed");
@@ -69,16 +65,13 @@ const PaymentPage = () => {
         paymentScreenshot: paymentImageUrl,
       };
 
-      const response = await fetch(
-        `${url}/api/users/register`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(dataToSubmit),
-        }
-      );
+      const response = await fetch(`${url}/api/users/register`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(dataToSubmit),
+      });
 
       const data = await response.json();
 
@@ -148,7 +141,7 @@ const PaymentPage = () => {
             className="w-64 h-64 mx-auto rounded-lg shadow-lg"
           />
           <p className="text-purple-300 text-center mt-4 font-medium">
-            Scan QR code to pay ₹310
+            Scan QR code to pay ₹400
           </p>
         </div>
 
@@ -174,7 +167,9 @@ const PaymentPage = () => {
               required
               disabled={isLoading}
             />
-            <p className="text-sm text-purple-300 mt-1">UTR ID must be exactly 12 characters</p>
+            <p className="text-sm text-purple-300 mt-1">
+              UTR ID must be exactly 12 characters
+            </p>
           </div>
 
           <div>
@@ -193,8 +188,13 @@ const PaymentPage = () => {
               required
               disabled={isLoading}
             />
-            <p className="text-sm text-purple-300 mt-1">Image size should be less than 2MB.</p> {/* Note about image size */}
-            {imageError && <p className="text-red-500 text-sm mt-1">{imageError}</p>} {/* Display error message */}
+            <p className="text-sm text-purple-300 mt-1">
+              Image size should be less than 2MB.
+            </p>
+            {imageError && (
+              <p className="text-red-500 text-sm mt-1">{imageError}</p>
+            )}{" "}
+            {/* Display error message */}
           </div>
 
           <button
