@@ -4,14 +4,18 @@ import { useWindowScroll } from "react-use";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { NavItems, adminNavItems } from "../Constants/Constants";
-import { getUser, removeToken, removeUser } from "../utils/auth";
+import { getUser, removeToken, removeUser, setUser as persistUser, getToken } from "../utils/auth";
 
 const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
   const [user, setUser] = useState(getUser());
+  const url = import.meta.env.VITE_API_URL;
   const [isOpen, setIsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const profileRef = useRef(null);
   const navigate = useNavigate();
+  const linksContainerRef = useRef(null);
+  const [useMobileNav, setUseMobileNav] = useState(false);
+  const token = getToken();
 
   const ProfileDropdown = () => (
     <div className="relative" ref={profileRef}>
@@ -40,19 +44,17 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
               <span>ID:</span>
               <span className="text-white">{user?.collegeId}</span>
             </p>
-            {user?.college !== "kluniversity" && (
-              <p className="mt-2 flex justify-between text-sm text-gray-300">
-                <span>Payment Status:</span>
-                <span
-                  className={clsx("font-semibold", {
-                    "text-green-500": user?.paymentStatus === "approved",
-                    "text-yellow-500": user?.paymentStatus !== "approved",
-                  })}
-                >
-                  {user?.paymentStatus}
-                </span>
-              </p>
-            )}
+            <p className="mt-2 flex justify-between text-sm text-gray-300">
+              <span>Payment Status:</span>
+              <span
+                className={clsx("font-semibold", {
+                  "text-green-500": user?.paymentStatus === "approved",
+                  "text-yellow-500": user?.paymentStatus !== "approved",
+                })}
+              >
+                {user?.paymentStatus || "N/A"}
+              </span>
+            </p>
           </div>
           <div className="px-4 py-3">
             <button
@@ -112,6 +114,30 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
     };
   }, [user]);
 
+  // Keep user profile fresh (including paymentStatus and role) from secure /me
+  useEffect(() => {
+    const fetchAndSyncUser = async () => {
+      try {
+        if (!url || !token) return;
+        const res = await fetch(`${url}/api/users/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) return;
+        const latest = await res.json();
+        const merged = { ...user, ...latest };
+        if (JSON.stringify(merged) !== JSON.stringify(user)) {
+          persistUser(merged);
+          setUser(merged);
+        }
+      } catch (e) {
+        // ignore
+      }
+    };
+    fetchAndSyncUser();
+    const id = setInterval(fetchAndSyncUser, 15000);
+    return () => clearInterval(id);
+  }, [token, url]);
+
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (profileRef.current && !profileRef.current.contains(event.target)) {
@@ -125,6 +151,42 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
   useEffect(() => {
     document.body.style.overflow = isOpen ? "hidden" : "unset";
   }, [isOpen]);
+
+  // Auto-switch to hamburger if nav links overflow available width
+  useEffect(() => {
+    const container = linksContainerRef.current;
+    if (!container) return;
+
+    const evaluateOverflow = () => {
+      // Force block display temporarily to measure children
+      const previousDisplay = container.style.display;
+      if (getComputedStyle(container).display === "none") {
+        container.style.display = "block";
+      }
+      const hasOverflow = container.scrollWidth > container.clientWidth;
+      // Also consider very long link lists by summing children widths
+      let childrenTotalWidth = 0;
+      container.childNodes.forEach((node) => {
+        if (node.getBoundingClientRect) {
+          const rect = node.getBoundingClientRect();
+          childrenTotalWidth += rect.width;
+        }
+      });
+      const containerWidth = container.getBoundingClientRect().width;
+      const isOverflowing = hasOverflow || childrenTotalWidth > containerWidth;
+      setUseMobileNav(isOverflowing);
+      container.style.display = previousDisplay;
+    };
+
+    const resizeObserver = new ResizeObserver(() => evaluateOverflow());
+    resizeObserver.observe(container);
+    window.addEventListener("resize", evaluateOverflow);
+    evaluateOverflow();
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", evaluateOverflow);
+    };
+  }, [extendedLinks]);
 
   const handleLogout = () => {
     removeToken();
@@ -196,7 +258,13 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
             </Link>
             <nav className="flex size-full items-center justify-center p-4 text-2xl font-bold">
               <div className="flex h-full items-center">
-                <div className="hidden md:block">
+                <div
+                  ref={linksContainerRef}
+                  className={clsx({
+                    "hidden": useMobileNav,
+                    "md:block": !useMobileNav,
+                  })}
+                >
                   {extendedLinks.map((item, index) => (
                     <NavLink
                       to={item.to}
@@ -248,7 +316,13 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
 
               <button
                 onClick={() => setIsOpen(!isOpen)}
-                className="relative z-50 flex h-10 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-white transition-all duration-300 hover:bg-black/50 focus:outline-none lg:hidden"
+                className={clsx(
+                  "relative z-50 flex h-10 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-white transition-all duration-300 hover:bg-black/50 focus:outline-none",
+                  {
+                    "lg:hidden": !useMobileNav,
+                    "lg:flex": useMobileNav,
+                  }
+                )}
               >
                 <div className="relative flex h-4 w-5 flex-col justify-between">
                   <span

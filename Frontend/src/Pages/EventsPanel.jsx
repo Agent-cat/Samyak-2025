@@ -1,4 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import * as XLSX from "xlsx";
 
 const EventsPanel = () => {
   const url = import.meta.env.VITE_API_URL;
@@ -39,6 +46,8 @@ const EventsPanel = () => {
     message: "",
     onConfirm: null,
   });
+  const [quickCategoryId, setQuickCategoryId] = useState(null);
+  const categoryRefs = useRef({});
 
   const fetchEvents = useCallback(async () => {
     try {
@@ -66,17 +75,17 @@ const EventsPanel = () => {
 
   // Prevent body scroll when modal is open
   useEffect(() => {
-    if (showEventModal || showCategoryModal || showSubcategoryModal) {
-      document.body.style.overflow = 'hidden';
+    if (showEventModal || showCategoryModal || showSubcategoryModal || showRegisteredStudents) {
+      document.body.style.overflow = "hidden";
     } else {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     }
 
     // Cleanup function to restore scroll when component unmounts
     return () => {
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = "unset";
     };
-  }, [showEventModal, showCategoryModal, showSubcategoryModal]);
+  }, [showEventModal, showCategoryModal, showSubcategoryModal, showRegisteredStudents]);
 
   const closeEventModal = useCallback(() => {
     setShowEventModal(false);
@@ -555,7 +564,7 @@ const EventsPanel = () => {
     <div className="min-h-screen bg-black text-white p-6 md:p-10">
       <div className="pt-16 sm:pt-20"></div>
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex items-center justify-between mb-4 md:mb-6">
           <h2 className="text-3xl font-extrabold text-white">Events Panel</h2>
           <button
             onClick={handleAddCategory}
@@ -564,6 +573,73 @@ const EventsPanel = () => {
             Add Category
           </button>
         </div>
+
+        {/* Quick Add Toolbar */}
+        {categories && categories.length > 0 && (
+          <div className="mb-6 grid grid-cols-1 md:grid-cols-12 gap-3 items-stretch">
+            <div className="md:col-span-6 flex flex-col md:flex-row gap-2">
+              <select
+                value={quickCategoryId || ""}
+                onChange={(e) => setQuickCategoryId(e.target.value || null)}
+                className="w-full md:flex-1 bg-black border border-white/20 rounded-lg px-3 py-2 text-white focus:outline-none focus:border-red-500"
+              >
+                <option value="" disabled>
+                  Select category
+                </option>
+                {[...categories]
+                  .sort((a, b) => a.categoryName.localeCompare(b.categoryName))
+                  .map((c) => (
+                    <option key={c._id} value={c._id}>
+                      {c.categoryName}
+                    </option>
+                  ))}
+              </select>
+              <button
+                onClick={() => quickCategoryId && openAddEvent(quickCategoryId)}
+                disabled={!quickCategoryId}
+                className={`w-full md:w-auto px-4 py-2 rounded-lg ${
+                  quickCategoryId
+                    ? "bg-white text-black hover:bg-white/80"
+                    : "bg-white/20 text-white/60 cursor-not-allowed"
+                }`}
+              >
+                Add Event
+              </button>
+              <button
+                onClick={() =>
+                  quickCategoryId && handleAddSubcategory(quickCategoryId)
+                }
+                disabled={!quickCategoryId}
+                className={`w-full md:w-auto px-4 py-2 rounded-lg ${
+                  quickCategoryId
+                    ? "bg-blue-600 text-white hover:bg-blue-500"
+                    : "bg-blue-600/30 text-white/60 cursor-not-allowed"
+                }`}
+              >
+                Add Subcategory
+              </button>
+            </div>
+            <div className="md:col-span-6 flex flex-col md:flex-row gap-2 md:justify-end">
+              <button
+                onClick={() => {
+                  if (!quickCategoryId) return;
+                  const el = categoryRefs.current[quickCategoryId];
+                  if (el && typeof el.scrollIntoView === "function") {
+                    el.scrollIntoView({ behavior: "smooth", block: "start" });
+                  }
+                }}
+                disabled={!quickCategoryId}
+                className={`w-full md:w-auto px-4 py-2 rounded-lg border ${
+                  quickCategoryId
+                    ? "border-white/20 text-white hover:bg-white/10"
+                    : "border-white/10 text-white/60 cursor-not-allowed"
+                }`}
+              >
+                Jump to Category
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Deployment Notice */}
         <div className="mb-6 p-4 bg-yellow-600/20 border border-yellow-500/30 rounded-xl">
@@ -581,9 +657,11 @@ const EventsPanel = () => {
                 Important Notice
               </h3>
               <p className="text-yellow-200 text-sm">
-                Please update the images for events as they were lost during
-                deployment. You can re-upload images by editing existing events
-                or adding new ones.
+                1. Added a "Jump to Category" button for easy navigation. <br />
+                2. Ensured uploaded images must be less than 2 MB in size.
+                <br />
+                3. If an image upload fails even under 2 MB convert it to WebP
+                format.
               </p>
             </div>
           </div>
@@ -596,27 +674,37 @@ const EventsPanel = () => {
               <div
                 key={category._id}
                 className="rounded-2xl border border-white/10 bg-black/60 shadow-xl"
+                ref={(el) => {
+                  if (el) categoryRefs.current[category._id] = el;
+                }}
               >
                 <div className="flex items-center justify-between px-5 py-4 border-b border-white/10">
-                  <h3 className="text-2xl font-semibold text-white">
+                  <h3 className="text-2xl font-semibold text-white flex items-center gap-2">
                     {category.categoryName}
+                    <span className="text-sm bg-white/10 text-white/80 px-2 py-0.5 rounded-full border border-white/10">
+                      {(category.Events?.length || 0) +
+                        (category.subcategories?.reduce(
+                          (sum, sub) => sum + (sub.Events?.length || 0),
+                          0
+                        ) || 0)}
+                    </span>
                   </h3>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap justify-end">
                     <button
                       onClick={() => openAddEvent(category._id)}
-                      className="px-4 py-2 rounded-lg bg-white text-black hover:bg-white/80 border border-white/10"
+                      className="w-full sm:w-auto px-4 py-2 rounded-lg bg-white text-black hover:bg-white/80 border border-white/10"
                     >
                       Add Event
                     </button>
                     <button
                       onClick={() => handleAddSubcategory(category._id)}
-                      className="px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500"
+                      className="w-full sm:w-auto px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-500"
                     >
                       Add Subcategory
                     </button>
                     <button
                       onClick={() => handleDeleteCategory(category._id)}
-                      className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500"
+                      className="w-full sm:w-auto px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-500"
                     >
                       Delete Category
                     </button>
@@ -696,12 +784,12 @@ const EventsPanel = () => {
                               </div>
                             </div>
                             <div className="flex gap-2 pt-1">
-                              {/* <button
+                              <button
                               onClick={() => handleViewRegisteredStudents(event)}
-                              className="px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-500 text-xs"
+                              className="px-3 py-2 rounded-md bg-black text-white border border-white/65 hover:bg-white hover:text-black text-xs"
                             >
-                              Students ({event.registeredStudents?.length || 0})
-                            </button> */}
+                              Registrations ({event.registeredStudents?.length || 0})
+                            </button>
                               <button
                                 onClick={() => openEditEvent(category, event)}
                                 className="flex-1 px-3 py-2 rounded-md bg-white text-black hover:bg-white/80"
@@ -837,12 +925,12 @@ const EventsPanel = () => {
                                         </div>
                                       </div>
                                       <div className="flex gap-2 pt-1">
-                                        {/* <button
+                                        <button   
                                     onClick={() => handleViewRegisteredStudents(event)}
                                     className="px-3 py-2 rounded-md bg-green-600 text-white hover:bg-green-500 text-xs"
                                   >
                                     Students ({event.registeredStudents?.length || 0})
-                                  </button> */}
+                                  </button>
                                         <button
                                           onClick={() =>
                                             openEditEvent(
@@ -899,9 +987,9 @@ const EventsPanel = () => {
       </div>
 
       {showCategoryModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          style={{ overflow: 'hidden' }}
+          style={{ overflow: "hidden" }}
           onWheel={(e) => e.stopPropagation()}
         >
           <div className="w-full max-w-md rounded-2xl bg-black border border-white/10 max-h-[90vh] flex flex-col overflow-hidden">
@@ -947,9 +1035,9 @@ const EventsPanel = () => {
       )}
 
       {showSubcategoryModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          style={{ overflow: 'hidden' }}
+          style={{ overflow: "hidden" }}
           onWheel={(e) => e.stopPropagation()}
         >
           <div className="w-full max-w-md rounded-2xl bg-black border border-white/10 max-h-[90vh] flex flex-col overflow-hidden">
@@ -999,20 +1087,47 @@ const EventsPanel = () => {
         </div>
       )}
 
-      {/* {showRegisteredStudents && selectedEventStudents && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 overflow-y-auto p-4">
+      {showRegisteredStudents && selectedEventStudents && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" style={{ overflow: "hidden" }} onWheel={(e) => e.stopPropagation()}>
           <div className="w-full max-w-4xl rounded-2xl bg-black border border-white/10 my-6 max-h-[90vh] flex flex-col">
             <div className="p-6 border-b border-white/10 flex-shrink-0">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-3">
                 <h3 className="text-xl font-semibold text-white">
                   Registered Students - {selectedEventStudents.title}
                 </h3>
-                <button
-                  onClick={() => setShowRegisteredStudents(false)}
-                  className="text-white/60 hover:text-white"
-                >
-                  ✕
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => {
+                      try {
+                        const students = selectedEventStudents.registeredStudents || [];
+                        const exportData = students.map((s) => ({
+                          "Full Name": s.fullName,
+                          Email: s.email,
+                          College: s.college,
+                          "College ID": s.collegeId,
+                          Event: selectedEventStudents.title,
+                        }));
+                        const ws = XLSX.utils.json_to_sheet(exportData);
+                        const wb = XLSX.utils.book_new();
+                        XLSX.utils.book_append_sheet(wb, ws, "Registrations");
+                        const fileName = `${selectedEventStudents.title}_registrations_${new Date().toISOString().split("T")[0]}.xlsx`;
+                        XLSX.writeFile(wb, fileName);
+                      } catch (err) {
+                        console.error(err);
+                        alert("Failed to export. Please try again.");
+                      }
+                    }}
+                    className="px-3 py-2 rounded-lg bg-green-600 text-white hover:bg-green-500 text-sm"
+                  >
+                    Export to Excel
+                  </button>
+                  <button
+                    onClick={() => setShowRegisteredStudents(false)}
+                    className="px-3 py-2 rounded-lg bg-white/10 text-white hover:bg-white/20 text-sm"
+                  >
+                    Close
+                  </button>
+                </div>
               </div>
             </div>
             <div className="flex-1 overflow-y-auto p-6">
@@ -1033,12 +1148,12 @@ const EventsPanel = () => {
             </div>
           </div>
         </div>
-      )} */}
+      )}
 
       {showEventModal && (
-        <div 
+        <div
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          style={{ overflow: 'hidden' }}
+          style={{ overflow: "hidden" }}
           onWheel={(e) => e.stopPropagation()}
         >
           <div className="w-full max-w-2xl rounded-2xl bg-black border border-white/10 max-h-[90vh] flex flex-col overflow-hidden">
@@ -1049,10 +1164,7 @@ const EventsPanel = () => {
               </h3>
             </div>
             <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-gray-600 scrollbar-track-gray-800">
-              <form
-                onSubmit={handleEventSubmit}
-                className="p-6 space-y-6"
-              >
+              <form onSubmit={handleEventSubmit} className="p-6 space-y-6">
                 {/* Basic Info */}
                 <div className="grid md:grid-cols-2 gap-4 border border-white/10 rounded-xl p-4">
                   <div className="space-y-2">

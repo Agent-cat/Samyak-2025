@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback } from "react";
-import { IoChevronDown, IoChevronUp } from "react-icons/io5";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { IoChevronDown, IoChevronUp, IoPeople, IoSchool, IoPerson, IoCheckmarkCircle, IoTime, IoCloseCircle, IoLogIn } from "react-icons/io5";
 import * as XLSX from "xlsx";
 
 const EventModal = React.memo(
@@ -505,7 +505,7 @@ const AdminPanel = () => {
   const [events, setEvents] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState("pending"); // "pending", "approved", "rejected"
-  const [view, setView] = useState("registrations");
+  const [view, setView] = useState("dashboard");
   const [showEventModal, setShowEventModal] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showSubcategoryModal, setShowSubcategoryModal] = useState(false);
@@ -532,6 +532,10 @@ const AdminPanel = () => {
   });
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [expandedEvents, setExpandedEvents] = useState(new Set());
+  const [includeKL, setIncludeKL] = useState(false);
+  const [xlsxFile, setXlsxFile] = useState(null);
+  const [bulkUploading, setBulkUploading] = useState(false);
+  const [stats, setStats] = useState(null);
 
   const closeEventModal = useCallback(() => {
     setShowEventModal(false);
@@ -559,17 +563,37 @@ const AdminPanel = () => {
   useEffect(() => {
     if (view === "registrations") {
       fetchRegistrations();
-    } else {
+    } else if (view === "events") {
       fetchEvents();
+    } else if (view === "dashboard") {
+      fetchStats();
     }
   }, [filter, view]);
 
+  const fetchStats = async () => {
+    try {
+      setIsLoading(true);
+      const response = await fetch(`${url}/api/admin/stats`, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      const data = await response.json();
+      setStats(data);
+    } catch (error) {
+      console.error("Error fetching stats:", error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const fetchRegistrations = async () => {
     try {
+      const qs = new URLSearchParams();
+      if (filter !== "all") qs.set("status", filter);
+      if (includeKL) qs.set("includeKL", "true");
       const response = await fetch(
-        `${url}/api/admin/registrations${
-          filter !== "all" ? `?status=${filter}` : ""
-        }`,
+        `${url}/api/admin/registrations${qs.toString() ? `?${qs.toString()}` : ""}`,
         {
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -582,6 +606,65 @@ const AdminPanel = () => {
       console.error("Error fetching registrations:", error);
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handleBulkApprove = async () => {
+    if (!xlsxFile) return;
+    try {
+      setBulkUploading(true);
+      // Read file using XLSX to extract emails
+      const data = await xlsxFile.arrayBuffer();
+      const workbook = XLSX.read(data);
+      const firstSheet = workbook.SheetNames[0];
+      const worksheet = workbook.Sheets[firstSheet];
+      const json = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      // Flatten and filter emails
+      const emailsSet = new Set();
+      for (const row of json) {
+        for (const cell of row) {
+          const text = String(cell || "").trim();
+          if (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text)) {
+            emailsSet.add(text.toLowerCase());
+          }
+        }
+      }
+      const emails = Array.from(emailsSet);
+      if (emails.length === 0) {
+        alert("No emails found in the uploaded file.");
+        return;
+      }
+      const resp = await fetch(`${url}/api/admin/registrations/bulk-approve`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ emails }),
+      });
+      const result = await resp.json();
+      if (!resp.ok) throw new Error(result.error || "Bulk approve failed");
+      const updatedCount = result.updated?.length || 0;
+      const createdCount = Array.isArray(result.created)
+        ? result.created.filter((c) => c.status === "created_and_notified").length || result.created.length
+        : 0;
+      const skippedNonKLU = Array.isArray(result.created)
+        ? result.created.filter((c) => c.status === "skipped_non_klu").length
+        : 0;
+      const errorsCount = result.errors?.length || 0;
+      const notFoundLegacy = result.notFound?.length || 0; // backward compatibility
+      alert(
+        `Approved existing: ${updatedCount}\nCreated new KLU: ${createdCount}` +
+        (skippedNonKLU ? `\nSkipped non-KLU: ${skippedNonKLU}` : "") +
+        (errorsCount ? `\nErrors: ${errorsCount}` : "") +
+        (notFoundLegacy ? `\nNot found: ${notFoundLegacy}` : "")
+      );
+      fetchRegistrations();
+    } catch (e) {
+      console.error(e);
+      alert(e.message || "Failed to bulk approve");
+    } finally {
+      setBulkUploading(false);
     }
   };
 
@@ -606,8 +689,9 @@ const AdminPanel = () => {
   }, []);
 
   useEffect(() => {
-    fetchEvents();
-  }, [fetchEvents]);
+    // Preload stats for initial dashboard view
+    fetchStats();
+  }, []);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -1013,6 +1097,16 @@ const AdminPanel = () => {
           </h2>
           <div className="flex flex-wrap gap-3 sm:gap-4 w-full sm:w-auto">
             <button
+              onClick={() => setView("dashboard")}
+              className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
+                view === "dashboard"
+                  ? "bg-purple-600 text-white"
+                  : "bg-gray-700 text-gray-300 hover:bg-purple-500"
+              }`}
+            >
+              Dashboard
+            </button>
+            <button
               onClick={() => setView("registrations")}
               className={`flex-1 sm:flex-none px-4 sm:px-6 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                 view === "registrations"
@@ -1032,11 +1126,137 @@ const AdminPanel = () => {
             >
               Events
             </button>
+            {view === "registrations" && (
+              <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-2 bg-gray-700 rounded-lg px-3 py-2.5">
+                  <label className="flex items-center gap-2 text-gray-300">
+                    <input
+                      type="checkbox"
+                      checked={includeKL}
+                      onChange={(e) => setIncludeKL(e.target.checked)}
+                    />
+                    Include KL
+                  </label>
+                </div>
+                <div className="flex items-center gap-2 bg-gray-700 rounded-lg px-3 py-2.5">
+                  <input
+                    type="file"
+                    accept=".xlsx,.xls"
+                    onChange={(e) => setXlsxFile(e.target.files?.[0] || null)}
+                    className="text-sm"
+                  />
+                  <button
+                    disabled={!xlsxFile || bulkUploading}
+                    onClick={handleBulkApprove}
+                    className={`px-4 py-2 rounded-lg ${!xlsxFile || bulkUploading ? "bg-gray-500" : "bg-green-600 hover:bg-green-500"} text-white`}
+                  >
+                    {bulkUploading ? "Approving..." : "Bulk Approve"}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
+        {view === "dashboard" && (
+          <div className="space-y-8">
+            {/* Derived metrics */}
+            {(() => {
+              const total = stats?.users?.total ?? 0;
+              const klu = stats?.users?.klu ?? 0;
+              const nonKlu = stats?.users?.nonKlu ?? 0;
+              const entered = stats?.users?.hasEntered ?? 0;
+              const approved = stats?.users?.payment?.approved ?? 0;
+              const pending = stats?.users?.payment?.pending ?? 0;
+              const rejected = stats?.users?.payment?.rejected ?? 0;
+              const approvedKLU = stats?.users?.payment?.approvedKLU ?? 0;
+              const approvedNonKLU = stats?.users?.payment?.approvedNonKLU ?? 0;
+              const pct = (n, d) => (d > 0 ? Math.round((n / d) * 100) : 0);
+
+              return (
+                <>
+                  {/* Top KPIs */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <DashboardCard title="Total Users" value={total} subtitle={`${klu} KLU • ${nonKlu} Non-KLU`} icon={<IoPeople />} />
+                    <DashboardCard title="KLU Users" value={klu} subtitle={`${pct(klu, total)}% of total`} color="emerald" icon={<IoSchool />} />
+                    <DashboardCard title="Non-KLU Users" value={nonKlu} subtitle={`${pct(nonKlu, total)}% of total`} color="teal" icon={<IoPerson />} />
+                    <DashboardCard title="On-site Entered" value={entered} subtitle={`${pct(entered, total)}% of total`} color="purple" icon={<IoLogIn />} />
+                  </div>
+
+                  {/* Payment Breakdown */}
+                  <div className="bg-gray-800/50 border border-purple-700 rounded-xl p-4">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold text-purple-300">Payment Status</h3>
+                      <span className="text-sm text-gray-400">{total} users</span>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-4">
+                      <DashboardCard title="Approved" value={approved} subtitle={`${pct(approved, total)}%`} color="green" compact icon={<IoCheckmarkCircle />} />
+                      <DashboardCard title="Pending" value={pending} subtitle={`${pct(pending, total)}%`} color="yellow" compact icon={<IoTime />} />
+                      <DashboardCard title="Rejected" value={rejected} subtitle={`${pct(rejected, total)}%`} color="red" compact icon={<IoCloseCircle />} />
+                    </div>
+
+                    {/* Progress bar */}
+                    <div className="w-full h-3 rounded-full bg-gray-700 overflow-hidden">
+                      <div className="h-full bg-green-500" style={{ width: `${pct(approved, total)}%` }}></div>
+                      <div className="h-full bg-yellow-500" style={{ width: `${pct(pending, total)}%` }}></div>
+                      <div className="h-full bg-red-500" style={{ width: `${pct(rejected, total)}%` }}></div>
+                    </div>
+
+                    <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm text-gray-300">
+                      <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-green-500"></span>Approved (KLU): <span className="ml-auto font-semibold">{approvedKLU}</span></div>
+                      <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-emerald-500"></span>Approved (Non-KLU): <span className="ml-auto font-semibold">{approvedNonKLU}</span></div>
+                      <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-yellow-500"></span>Pending: <span className="ml-auto font-semibold">{pending}</span></div>
+                      <div className="flex items-center gap-2"><span className="inline-block w-3 h-3 rounded bg-red-500"></span>Rejected: <span className="ml-auto font-semibold">{rejected}</span></div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+
+            {/* Recent Users */}
+            <div className="bg-gray-800/50 rounded-xl border border-purple-700 overflow-hidden">
+              <div className="px-4 py-3 border-b border-gray-700">
+                <h3 className="text-lg font-semibold text-purple-300">Recent Users</h3>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-gray-200">
+                  <thead className="text-sm text-purple-400 uppercase bg-gray-700">
+                    <tr>
+                      <th className="px-4 py-3">Name</th>
+                      <th className="px-4 py-3">Email</th>
+                      <th className="px-4 py-3">College</th>
+                      <th className="px-4 py-3">Status</th>
+                      <th className="px-4 py-3">Joined</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {(stats?.users?.recent || []).map((u) => (
+                      <tr key={u._id} className="border-b border-gray-700">
+                        <td className="px-4 py-3">{u.fullName || "-"}</td>
+                        <td className="px-4 py-3">{u.email}</td>
+                        <td className="px-4 py-3">{u.college || "-"}</td>
+                        <td className="px-4 py-3">
+                          <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStatusBadgeColor(u.paymentStatus)}`}>
+                            {u.paymentStatus}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">{new Date(u.createdAt).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                    {(!stats || (stats?.users?.recent || []).length === 0) && (
+                      <tr>
+                        <td className="px-4 py-6 text-center text-gray-400" colSpan={5}>No recent users</td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {view === "registrations" && (
-          <div className="flex gap-4 mb-6">
+          <div className="flex flex-wrap gap-3 sm:gap-4 mb-6 items-center">
             <button
               onClick={() => setFilter("pending")}
               className={`px-4 py-2 rounded-lg ${
@@ -1223,8 +1443,17 @@ const AdminPanel = () => {
             {events.map((category) => (
               <div key={category._id} className="mb-8">
                 <div className="flex justify-between items-center mb-4">
-                  <h3 className="text-2xl font-semibold text-purple-400">
+                  <h3 className="text-2xl font-semibold text-purple-400 flex items-center gap-2">
                     {category.categoryName}
+                    <span className="text-sm bg-purple-600/20 text-purple-300 px-2 py-0.5 rounded-full border border-purple-500/30">
+                      {(
+                        (category.Events?.length || 0) +
+                        (category.subcategories?.reduce(
+                          (sum, sub) => sum + (sub.Events?.length || 0),
+                          0
+                        ) || 0)
+                      )}
+                    </span>
                   </h3>
                   <div className="flex gap-2">
                     <button
@@ -1595,3 +1824,33 @@ const AdminPanel = () => {
 };
 
 export default AdminPanel;
+
+const DashboardCard = ({ title, value, subtitle, color = "purple", icon, compact = false }) => {
+  const colorMap = {
+    purple: "from-purple-500 to-pink-500",
+    green: "from-green-500 to-emerald-500",
+    yellow: "from-yellow-500 to-amber-500",
+    red: "from-red-500 to-rose-500",
+    emerald: "from-emerald-500 to-green-500",
+    teal: "from-teal-500 to-cyan-500",
+  };
+  const gradient = colorMap[color] || colorMap.purple;
+  return (
+    <div className={`bg-gray-800/50 border border-purple-700 rounded-xl ${compact ? "p-3" : "p-4"}`}>
+      <div className="flex items-start gap-3">
+        {icon && (
+          <div className={`text-xl ${compact ? "mt-0.5" : "mt-0.5"} text-purple-300`}>
+            {icon}
+          </div>
+        )}
+        <div className="flex-1">
+          <p className="text-xs text-gray-300 mb-1">{title}</p>
+          <div className={`font-extrabold bg-clip-text text-transparent bg-gradient-to-r ${gradient} ${compact ? "text-2xl" : "text-3xl"}`}>
+            {value}
+          </div>
+          {subtitle && <p className="text-xs text-gray-400 mt-1">{subtitle}</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
