@@ -30,6 +30,26 @@ router.post("/upload", upload.single("file"), (req, res) => {
 router.post("/register", register);
 router.post("/login", login);
 router.get("/all-users", allUsers);
+router.get("/me", protect, async (req, res) => {
+  try {
+    const user = req.user;
+    res.json({
+      _id: user._id,
+      email: user.email,
+      fullName: user.fullName,
+      college: user.college,
+      collegeId: user.collegeId,
+      state: user.state,
+      address: user.address,
+      paymentStatus: user.paymentStatus,
+      isApproved: user.isApproved,
+      role: user.role,
+      hasEntered: user.hasEntered,
+    });
+  } catch (e) {
+    res.status(500).json({ error: "Failed to fetch profile" });
+  }
+});
 router.get("/verify-user", protect, async (req, res, next) => {
   if (req.user.role !== "admin") {
     return res.status(403).json({ message: "Access denied" });

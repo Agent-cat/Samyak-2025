@@ -1,4 +1,5 @@
 import Event from "../models/events.model.js";
+import User from "../models/user.model.js";
 import redisClient from "../redisClient.js"; 
 
 
@@ -109,6 +110,22 @@ export const registerForEvent = async (req, res) => {
   try {
     const { categoryId, eventId } = req.params;
     const userId = req.user._id;
+
+    // Enforce payment approval rules
+    const user = await User.findById(userId).select("college paymentStatus isApproved email");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (!user.isApproved) {
+      return res.status(403).json({ message: "Your account is not approved yet." });
+    }
+    if (user.paymentStatus !== "approved") {
+      const isKLEmail = typeof user.email === "string" && user.email.toLowerCase().endsWith("@kluniversity.in");
+      const msg = isKLEmail
+        ? "Please pay the event fee in ERP to complete your registration."
+        : "Your registration payment is pending approval.";
+      return res.status(403).json({ message: msg });
+    }
 
     
     const category = await Event.findById(categoryId);
@@ -579,6 +596,22 @@ export const registerForSubcategoryEvent = async (req, res) => {
   try {
     const { categoryId, subcategoryId, eventId } = req.params;
     const userId = req.user._id;
+
+    // Enforce payment approval rules
+    const user = await User.findById(userId).select("college paymentStatus isApproved email");
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    if (!user.isApproved) {
+      return res.status(403).json({ message: "Your account is not approved yet." });
+    }
+    if (user.paymentStatus !== "approved") {
+      const isKLEmail = typeof user.email === "string" && user.email.toLowerCase().endsWith("@kluniversity.in");
+      const msg = isKLEmail
+        ? "Please pay the event fee in ERP to complete your registration."
+        : "Your registration payment is pending approval.";
+      return res.status(403).json({ message: msg });
+    }
 
     const category = await Event.findById(categoryId);
     if (!category) {

@@ -60,7 +60,7 @@ export const sendEmailWithAttachment = async (email, qrCodeDataUrl) => {
             subject: 'Your Registration QR Code',
             html: `
         <p>Thank you for registering for KL SAMYAK. </p> 
-        <h1>Note: Please present this QR code at the gate for entry into the college on March 7 and 8.</h1>
+        <h1>Note: Please present this QR code at the gate for entry into the college on october 9,10 and 11.</h1>
         <p>Your QR code is attached below </p>
       `,
             attachments: [
@@ -80,3 +80,31 @@ export const sendEmailWithAttachment = async (email, qrCodeDataUrl) => {
         return false;
     }
 }; 
+
+export const sendKLUApprovalEmail = async (email, password) => {
+    try {
+        const mailOptions = {
+            from: process.env.EMAIL_USER,
+            to: email,
+            subject: 'Samyak Account Created - KL University',
+            html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; color: #111;">
+          <h2 style="color: #6b46c1;">Welcome to Samyak</h2>
+          <p>Thanks for paying the event fee in the ERP portal. Your account has been created.</p>
+          <div style="background:#f4f4f5; padding:12px 16px; border-radius:8px; margin:16px 0;">
+            <p style="margin:0;">Login Email: <strong>${email}</strong></p>
+            <p style="margin:4px 0 0;">Temporary Password: <strong>${password}</strong></p>
+          </div>
+          <p style="margin-top:12px;">Please log in and change your password after your first login.</p>
+        </div>
+      `
+        };
+
+        const info = await transporter.sendMail(mailOptions);
+        console.log('Email sent successfully:', info.messageId);
+        return true;
+    } catch (error) {
+        console.error('Error in sendKLUApprovalEmail:', error);
+        return false;
+    }
+};

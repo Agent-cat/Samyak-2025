@@ -42,7 +42,9 @@ export const register = async (req, res) => {
       });
     }
     console.log(college)
-    if (college === "kluniversity") {
+    // Treat KL University users by email domain irrespective of provided college value
+    const isKLEmail = typeof email === "string" && email.toLowerCase().endsWith("@kluniversity.in");
+    if (isKLEmail) {
       const salt = await bcrypt.genSalt(10);
       const hashedPassword = await bcrypt.hash(password, salt);
 
@@ -57,7 +59,8 @@ export const register = async (req, res) => {
         phoneNumber,
         country: country === "Other" ? otherCountryName : country,
         profileImage,
-        paymentStatus: "approved",
+        // Allow login but require ERP event fee for event registrations
+        paymentStatus: "pending",
         isApproved: true,
         hasEntered: false,
       });
@@ -171,6 +174,8 @@ export const login = async (req, res) => {
       fullName: user.fullName,
       state: user.state,
       address: user.address,
+      paymentStatus: user.paymentStatus,
+      isApproved: user.isApproved,
       role: user.role,
       token,
     });
