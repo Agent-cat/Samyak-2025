@@ -12,7 +12,7 @@ import AdminPanel from "../Pages/AdminPanel";
 import EventsPanel from "../Pages/EventsPanel";
 import RegisteredEvents from "../Pages/RegisteredEvents";
 import AuthRoute from "../utils/AuthRoute";
-import { getUser } from "../utils/auth";
+import { getUser, getToken } from "../utils/auth";
 import PleaseLogin from "../Pages/PleaseLogin";
 import ForgotPassword from "../Components/ForgotPassword";
 import UserDetails from "../Pages/UserDetails";
@@ -20,8 +20,10 @@ import Team from "../Pages/Team";
 
 const NRoutes = () => {
   const user = getUser();
-  const isPrivileged = ["admin", "hod", "manager"].includes(user?.role);
-  const isAdmin = user?.role === "admin";
+  const token = getToken();
+  const serverRole = user?.role; // kept for now; Navbar will refresh from /me
+  const isPrivileged = ["admin", "hod", "manager"].includes(serverRole);
+  const isAdmin = serverRole === "admin";
 
   return (
     <Routes>

@@ -395,7 +395,7 @@ const Register = () => {
               </select>
               {formData.college === "other" && (
                 <p className="mt-2 text-sm text-white font-sans">
-                  Note: Non-KL University students are required to pay ₹310
+                  Note: Non-KL University students are required to pay ₹400
                   registration fee.
                 </p>
               )}
