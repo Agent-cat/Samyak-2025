@@ -53,7 +53,12 @@ export const updateRegistration = async (req, res) => {
       } else {
         const qrUrl = `${process.env.FRONTEND_URL}/user-details/${registration.email}`;
         const qrCodeDataUrl = await QRCode.toDataURL(qrUrl);
-        await sendEmailWithAttachment(registration.email, qrCodeDataUrl);
+        await sendEmailWithAttachment(registration.email, qrCodeDataUrl, {
+          fullName: registration.fullName,
+          college: registration.college,
+          collegeId: registration.collegeId,
+          profileImage: registration.profileImage
+        });
       }
 
       if (!isKLEmail) {
