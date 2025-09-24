@@ -79,7 +79,7 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
           <p className="text-lg font-semibold text-white">
             {user?.fullName || "User"}
           </p>
-          <p className="text-sm text-gray-300">{user?.email}</p>
+          <p className="text-sm text-gray-300">{user?.email}hen update the frontend to rely on server-verified roles and fetch the current user from /me instead of trusting localStora</p>
         </div>
       </div>
       <button

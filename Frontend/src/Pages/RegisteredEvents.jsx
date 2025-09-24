@@ -7,17 +7,15 @@ import {
   IoSearch,
   IoList,
   IoGrid,
-} from "react-icons/io5"; // IoChevronDown is not explicitly used in this iteration for expand/collapse
+} from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 
-// --- Helper Components for a Cleaner Structure ---
 
-// Icon Wrapper for consistent styling
 const IconWrapper = ({ children, className }) => (
   <div className={`text-white ${className}`}>{children}</div>
 );
 
-// Confirmation Modal Component
+
 const ConfirmationModal = ({ event, onConfirm, onCancel }) => {
   if (!event) return null;
 

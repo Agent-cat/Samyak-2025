@@ -3,10 +3,11 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/all";
 import Navbar from "../Navbar";
+// import ChiefGuestsPopup from "../ChiefGuestsPopup";
 
 gsap.registerPlugin(ScrollTrigger);
 
-// The Audio Permission Popup component
+
 const AudioPermissionPopup = ({ onEnable, onDisable }) => {
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/70 backdrop-blur-sm">
@@ -46,6 +47,13 @@ const Landing = () => {
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const audioRef = useRef(null);
 
+  const [showGuests, setShowGuests] = useState(false);
+  const chiefGuests = [
+    { id: "cg-1", name: "Chief Guest 1", role: "Guest of Honor", image: "/img/2022.jpeg" },
+    { id: "cg-2", name: "Chief Guest 2", role: "Chief Guest", image: "/img/2023.jpeg" },
+    { id: "cg-3", name: "Chief Guest 3", role: "Keynote Speaker", image: "/img/2024.jpeg" },
+  ];
+
   const totalVideos = 1;
   const nextVdRef = useRef(null);
 
@@ -54,6 +62,13 @@ const Landing = () => {
     if (audioPreference !== null) {
       setIsAudioPlaying(audioPreference === "enabled");
       setShowAudioPopup(false);
+      // If user had preference set previously, auto-show guests once per session
+      if (!sessionStorage.getItem("cg_shown")) {
+        setTimeout(() => {
+          setShowGuests(true);
+          sessionStorage.setItem("cg_shown", "1");
+        }, 300);
+      }
     }
   }, []);
 
@@ -77,12 +92,24 @@ const Landing = () => {
     setIsAudioPlaying(true);
     setShowAudioPopup(false);
     localStorage.setItem("audio_preference", "enabled");
+    if (!sessionStorage.getItem("cg_shown")) {
+      setTimeout(() => {
+        setShowGuests(true);
+        sessionStorage.setItem("cg_shown", "1");
+      }, 300);
+    }
   };
 
   const handleDisableAudio = () => {
     setIsAudioPlaying(false);
     setShowAudioPopup(false);
     localStorage.setItem("audio_preference", "disabled");
+    if (!sessionStorage.getItem("cg_shown")) {
+      setTimeout(() => {
+        setShowGuests(true);
+        sessionStorage.setItem("cg_shown", "1");
+      }, 300);
+    }
   };
 
   const handleMiniVdClick = () => {
@@ -150,10 +177,18 @@ const Landing = () => {
         />
       )}
 
+      {/* <ChiefGuestsPopup
+        open={showGuests}
+        onClose={() => setShowGuests(false)}
+        members={chiefGuests}
+        title="Chief Guests"
+      /> */}
+
       {/* The audio element for the landing page */}
       <audio ref={audioRef} className="hidden" src="/audio/bg.mp3" loop />
 
       <div className="relative h-dvh w-screen overflow-x-hidden">
+
         {/* ... (rest of your Landing page code) ... */}
         <div
           id="video-frame"

@@ -43,9 +43,7 @@ const PaymentPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setIsLoading(true);
-    setImageError(""); // Reset image error message
-
-    // Check if the image size exceeds 2MB (2 * 1024 * 1024 bytes)
+    setImageError(""); 
     if (paymentImage && paymentImage.size > 2 * 1024 * 1024) {
       setImageError("File size exceeds 2MB. Please upload a smaller file.");
       setIsLoading(false);

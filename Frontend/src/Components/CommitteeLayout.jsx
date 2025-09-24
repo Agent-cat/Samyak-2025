@@ -68,17 +68,8 @@ const CommitteeLayout = () => {
         dept: "BBA",
         url: getRandomImage(2),
       },
-      
     ],
     "Chief Website & Drafting": [
-      {
-        id: "2200040002",
-        name: "JYOTHIKA",
-        role: "Chief Website & Drafting",
-        dept: "ECE",
-        url: getRandomImage(53),
-      },
-      
       {
         id: "2300031042",
         name: "VISHNU VARDHAN REDDY",
@@ -87,13 +78,20 @@ const CommitteeLayout = () => {
         url: getRandomImage(54),
       },
       {
+        id: "2200040002",
+        name: "JYOTHIKA",
+        role: "Chief Website & Drafting",
+        dept: "ECE",
+        url: getRandomImage(53),
+      },
+      {
         id: "2300031230",
         name: "SHYAM",
         role: "Chief Website & Drafting",
         dept: "CSE",
         url: getRandomImage(55),
       },
-      
+
       {
         id: "2300033258",
         name: "SOHAN",
@@ -251,7 +249,6 @@ const CommitteeLayout = () => {
         dept: "MBA",
         url: getRandomImage(17),
       },
-      
     ],
     "Chief Technical Events": [
       {
@@ -524,9 +521,8 @@ const CommitteeLayout = () => {
         url: getRandomImage(52),
       },
     ],
-    
+
     "Chief Registrations and Certifications": [
-    
       {
         id: "2401510243",
         name: "P AKSHAY",
@@ -615,7 +611,7 @@ const CommitteeLayout = () => {
         dept: "CSE",
         url: getRandomImage(66),
       },
-      
+
       {
         id: "2300032390",
         name: "L VENKATA SAI",
@@ -808,9 +804,7 @@ const CommitteeLayout = () => {
         dept: "MTECH",
         url: getRandomImage(86),
       },
-      
     ],
-    
   };
 
   const handleMemberClick = (member) => {
@@ -886,14 +880,12 @@ const CommitteeLayout = () => {
       )}
 
       <div className="max-w-7xl mx-auto pt-28 ">
-        
         <motion.div
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
           className="text-center mb-16"
         >
-         
           <h2 className="text-2xl font-light text-gray-300 mb-8 tracking-wide">
             STUDENT COMMITTEE
           </h2>
