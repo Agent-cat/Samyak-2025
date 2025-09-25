@@ -21,19 +21,59 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
     <div className="relative" ref={profileRef}>
       <button
         onClick={() => setIsProfileOpen(!isProfileOpen)}
-        className="flex items-center gap-2 text-white hover:text-gray-200 transition-colors"
+        className="flex items-center gap-3 text-white hover:text-gray-200 transition-all duration-200 hover:scale-105"
       >
-        <div className="h-10 w-10 rounded-full font-bold text-white">
-          {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
+        <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
+          {user?.profileImage ? (
+            <img 
+              src={user.profileImage} 
+              alt={user?.fullName || "User"} 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          <div 
+            className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-lg ${user?.profileImage ? 'hidden' : 'flex'}`}
+          >
+            {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
+          </div>
         </div>
-        <span className="font-medium">{user?.fullName || "User"}</span>
+        <div className="flex flex-col items-start">
+          <span className="font-semibold text-sm">{user?.fullName || "User"}</span>
+          <span className="text-xs text-gray-300">{user?.role || "User"}</span>
+        </div>
       </button>
 
       {isProfileOpen && (
         <div className="absolute right-0 z-50 mt-3 w-72 rounded-xl border border-white/10 bg-black/80 py-2 shadow-2xl backdrop-blur-lg">
           <div className="border-b border-white/10 px-6 py-4">
-            <p className="text-lg font-semibold text-white">{user?.fullName}</p>
-            <p className="text-sm text-gray-300">{user?.email}</p>
+            <div className="flex items-center gap-3 mb-3">
+              <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
+                {user?.profileImage ? (
+                  <img 
+                    src={user.profileImage} 
+                    alt={user?.fullName || "User"} 
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      e.target.style.display = 'none';
+                      e.target.nextSibling.style.display = 'flex';
+                    }}
+                  />
+                ) : null}
+                <div 
+                  className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-lg ${user?.profileImage ? 'hidden' : 'flex'}`}
+                >
+                  {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
+                </div>
+              </div>
+              <div>
+                <p className="text-lg font-semibold text-white">{user?.fullName}</p>
+                <p className="text-sm text-gray-300">{user?.email}</p>
+              </div>
+            </div>
           </div>
           <div className="border-b border-white/10 px-6 py-4">
             <p className="flex justify-between text-sm text-gray-300">
@@ -72,14 +112,30 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
   const MobileProfile = () => (
     <div className="mt-6 border-t border-white/10 pt-6">
       <div className="mb-6 flex items-center gap-4">
-        <div className="flex h-12 w-12 items-center justify-center rounded-full font-bold text-white shadow-lg">
-          {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
+        <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
+          {user?.profileImage ? (
+            <img 
+              src={user.profileImage} 
+              alt={user?.fullName || "User"} 
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                e.target.style.display = 'none';
+                e.target.nextSibling.style.display = 'flex';
+              }}
+            />
+          ) : null}
+          <div 
+            className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-xl ${user?.profileImage ? 'hidden' : 'flex'}`}
+          >
+            {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
+          </div>
         </div>
-        <div>
+        <div className="flex flex-col">
           <p className="text-lg font-semibold text-white">
             {user?.fullName || "User"}
           </p>
-          <p className="text-sm text-gray-300">{user?.email}hen update the frontend to rely on server-verified roles and fetch the current user from /me instead of trusting localStora</p>
+          <p className="text-sm text-gray-300">{user?.email}</p>
+          <p className="text-xs text-purple-300 font-medium">{user?.role || "User"}</p>
         </div>
       </div>
       <button
@@ -250,11 +306,12 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
       >
         <header className="absolute top-1/2 w-full -translate-y-1/2">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex items-center justify-center">
-              <h1 className=" ml-8 text-white font-bold hidden md:flex md:text-2xl">
+            <Link to="/" className="flex pl-8 items-center justify-center gap-3">
+              <h1 className="ml-8 text-white font-bold hidden md:flex md:text-2xl">
                 SAMYAK
               </h1>
-              <img className="w-16 h-auto" src="/img/samyak.svg" alt="" />
+              <img className="w-16 h-auto" src="/img/samyak.svg" alt="Samyak Logo" />
+              <img className="w-20 h-auto" src="/src/assets/kl.png" alt="KL Logo" />
             </Link>
             <nav className="flex size-full items-center justify-center p-4 text-2xl font-bold">
               <div className="flex h-full items-center">
