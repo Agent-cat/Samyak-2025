@@ -3,7 +3,7 @@ import gsap from "gsap";
 import { useGSAP } from "@gsap/react";
 import { ScrollTrigger } from "gsap/all";
 import Navbar from "../Navbar";
-// import ChiefGuestsPopup from "../ChiefGuestsPopup";
+import ChiefGuestsPopup from "../ChiefGuestsPopup";
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -49,9 +49,9 @@ const Landing = () => {
 
   const [showGuests, setShowGuests] = useState(false);
   const chiefGuests = [
-    { id: "cg-1", name: "Chief Guest 1", role: "Guest of Honor", image: "/img/2022.jpeg" },
-    { id: "cg-2", name: "Chief Guest 2", role: "Chief Guest", image: "/img/2023.jpeg" },
-    { id: "cg-3", name: "Chief Guest 3", role: "Keynote Speaker", image: "/img/2024.jpeg" },
+    { id: "cg-1", name: "(Dr) Srinivas Pindi ", role: "Vice President Human Resources & TA @ Phenom | Human Resource Planning", image: "/cg1.jpeg" },
+    { id: "cg-2", name: "To Be Announced", role: "...", image: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fcdn1.vectorstock.com%2Fi%2F1000x1000%2F91%2F85%2Fto-be-announced-rubber-stamp-vector-13489185.jpg&f=1&nofb=1&ipt=6694b7976bfda3f60d9e7973b119dbaaa7f4f8f5505d7eb496d2609b3fbfa03b" },
+    { id: "cg-3", name: "To Be Announced", role: "...", image: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fcdn1.vectorstock.com%2Fi%2F1000x1000%2F91%2F85%2Fto-be-announced-rubber-stamp-vector-13489185.jpg&f=1&nofb=1&ipt=6694b7976bfda3f60d9e7973b119dbaaa7f4f8f5505d7eb496d2609b3fbfa03b" },
   ];
 
   const totalVideos = 1;
@@ -62,14 +62,12 @@ const Landing = () => {
     if (audioPreference !== null) {
       setIsAudioPlaying(audioPreference === "enabled");
       setShowAudioPopup(false);
-      // If user had preference set previously, auto-show guests once per session
-      if (!sessionStorage.getItem("cg_shown")) {
-        setTimeout(() => {
-          setShowGuests(true);
-          sessionStorage.setItem("cg_shown", "1");
-        }, 300);
-      }
     }
+    
+    // Always show chief guests popup when component loads
+    setTimeout(() => {
+      setShowGuests(true);
+    }, 1000); // Show after 1 second to let the page load
   }, []);
 
   useEffect(() => {
@@ -92,24 +90,20 @@ const Landing = () => {
     setIsAudioPlaying(true);
     setShowAudioPopup(false);
     localStorage.setItem("audio_preference", "enabled");
-    if (!sessionStorage.getItem("cg_shown")) {
-      setTimeout(() => {
-        setShowGuests(true);
-        sessionStorage.setItem("cg_shown", "1");
-      }, 300);
-    }
+    // Show chief guests popup after audio decision
+    setTimeout(() => {
+      setShowGuests(true);
+    }, 500);
   };
 
   const handleDisableAudio = () => {
     setIsAudioPlaying(false);
     setShowAudioPopup(false);
     localStorage.setItem("audio_preference", "disabled");
-    if (!sessionStorage.getItem("cg_shown")) {
-      setTimeout(() => {
-        setShowGuests(true);
-        sessionStorage.setItem("cg_shown", "1");
-      }, 300);
-    }
+    // Show chief guests popup after audio decision
+    setTimeout(() => {
+      setShowGuests(true);
+    }, 500);
   };
 
   const handleMiniVdClick = () => {
@@ -177,12 +171,12 @@ const Landing = () => {
         />
       )}
 
-      {/* <ChiefGuestsPopup
+      <ChiefGuestsPopup
         open={showGuests}
         onClose={() => setShowGuests(false)}
         members={chiefGuests}
         title="Chief Guests"
-      /> */}
+      />
 
       {/* The audio element for the landing page */}
       <audio ref={audioRef} className="hidden" src="/audio/bg.mp3" loop />

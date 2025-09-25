@@ -16,10 +16,10 @@ export const NavItems = [
     title: "Registered Events",
     to: "/registered-events",
   },
-  {
-    title: "Team",
-    to: "/team",
-  },
+  // {
+  //   title: "Team",
+  //   to: "/team",
+  // },
 ];
 
 export const adminNavItems = {
