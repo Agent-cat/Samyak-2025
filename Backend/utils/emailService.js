@@ -6,16 +6,13 @@ dotenv.config();
 
 console.log(process.env.EMAIL_USER,process.env.EMAIL_PASSWORD)
 const transporter = nodemailer.createTransport({
-    host: 'smtp.office365.com',
-    port: 587,
-    secure: false,
+    service: 'gmail',
+   
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD
     },
-    tls: {
-        rejectUnauthorized: false
-    }
+    
 });
 
 export const sendOTPEmail = async (email, otp) => {
@@ -49,24 +46,24 @@ export const sendOTPEmail = async (email, otp) => {
     }
 };
 
-// Generate an ID Card PDF buffer with user's details and QR code
+
 const generateIdCardPdfBuffer = async (user, qrCodeDataUrl) => {
     return new Promise(async (resolve, reject) => {
         try {
-            const doc = new PDFDocument({ size: [350, 550], margin: 24 }); // portrait small card
+            const doc = new PDFDocument({ size: [350, 550], margin: 24 }); 
             const chunks = [];
             doc.on('data', (c) => chunks.push(c));
             doc.on('end', () => resolve(Buffer.concat(chunks)));
 
-            // Colors
-            const primary = '#111827'; // gray-900
-            const accent = '#ef4444'; // red-500
+            
+            const primary = '#111827'; 
+            const accent = '#ef4444'; 
             const light = '#ffffff';
 
             // Card background
             doc.rect(0, 0, doc.page.width, doc.page.height).fill(primary);
 
-            // Header strip
+           
             doc.save();
             doc.rect(0, 0, doc.page.width, 70).fill(accent);
             doc.fill(light).fontSize(20).font('Helvetica-Bold').text('SAMYAK 2025', 24, 22);
@@ -87,7 +84,7 @@ const generateIdCardPdfBuffer = async (user, qrCodeDataUrl) => {
             const left = 24;
 
             if (profileBuffer) {
-                // Draw circular backdrop; image rendered on top
+               
                 const imgSize = 90;
                 doc.circle(left + imgSize/2, contentTop + imgSize/2, imgSize/2).fill(light);
                 doc.image(profileBuffer, left, contentTop, { width: imgSize, height: imgSize });
@@ -101,10 +98,10 @@ const generateIdCardPdfBuffer = async (user, qrCodeDataUrl) => {
                 doc.text(`ID: ${user.collegeId}`, textLeft, contentTop + 42);
             }
 
-            // Divider
+          
             doc.moveTo(left, contentTop + 110).lineTo(doc.page.width - left, contentTop + 110).strokeColor('#374151').lineWidth(1).stroke();
 
-            // QR code image from data URL
+           
             const base64Data = qrCodeDataUrl.replace(/^data:image\/png;base64,/, "");
             const qrBuffer = Buffer.from(base64Data, 'base64');
             const qrSize = 180;

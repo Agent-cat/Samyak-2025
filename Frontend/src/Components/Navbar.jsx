@@ -4,7 +4,14 @@ import { useWindowScroll } from "react-use";
 import { useEffect, useRef, useState, useMemo } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { NavItems, adminNavItems } from "../Constants/Constants";
-import { getUser, removeToken, removeUser, setUser as persistUser, getToken } from "../utils/auth";
+import klLogo from "../assets/kl.png";
+import {
+  getUser,
+  removeToken,
+  removeUser,
+  setUser as persistUser,
+  getToken,
+} from "../utils/auth";
 
 const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
   const [user, setUser] = useState(getUser());
@@ -25,24 +32,28 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
       >
         <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
           {user?.profileImage ? (
-            <img 
-              src={user.profileImage} 
-              alt={user?.fullName || "User"} 
+            <img
+              src={user.profileImage}
+              alt={user?.fullName || "User"}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
+                e.target.style.display = "none";
+                e.target.nextSibling.style.display = "flex";
               }}
             />
           ) : null}
-          <div 
-            className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-lg ${user?.profileImage ? 'hidden' : 'flex'}`}
+          <div
+            className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-lg ${
+              user?.profileImage ? "hidden" : "flex"
+            }`}
           >
             {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
           </div>
         </div>
         <div className="flex flex-col items-start">
-          <span className="font-semibold text-sm">{user?.fullName || "User"}</span>
+          <span className="font-semibold text-sm">
+            {user?.fullName || "User"}
+          </span>
           <span className="text-xs text-gray-300">{user?.role || "User"}</span>
         </div>
       </button>
@@ -53,24 +64,28 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
             <div className="flex items-center gap-3 mb-3">
               <div className="relative h-12 w-12 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
                 {user?.profileImage ? (
-                  <img 
-                    src={user.profileImage} 
-                    alt={user?.fullName || "User"} 
+                  <img
+                    src={user.profileImage}
+                    alt={user?.fullName || "User"}
                     className="w-full h-full object-cover"
                     onError={(e) => {
-                      e.target.style.display = 'none';
-                      e.target.nextSibling.style.display = 'flex';
+                      e.target.style.display = "none";
+                      e.target.nextSibling.style.display = "flex";
                     }}
                   />
                 ) : null}
-                <div 
-                  className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-lg ${user?.profileImage ? 'hidden' : 'flex'}`}
+                <div
+                  className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-lg ${
+                    user?.profileImage ? "hidden" : "flex"
+                  }`}
                 >
                   {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
                 </div>
               </div>
               <div>
-                <p className="text-lg font-semibold text-white">{user?.fullName}</p>
+                <p className="text-lg font-semibold text-white">
+                  {user?.fullName}
+                </p>
                 <p className="text-sm text-gray-300">{user?.email}</p>
               </div>
             </div>
@@ -114,18 +129,20 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
       <div className="mb-6 flex items-center gap-4">
         <div className="relative h-16 w-16 rounded-full overflow-hidden border-2 border-white/20 shadow-lg">
           {user?.profileImage ? (
-            <img 
-              src={user.profileImage} 
-              alt={user?.fullName || "User"} 
+            <img
+              src={user.profileImage}
+              alt={user?.fullName || "User"}
               className="w-full h-full object-cover"
               onError={(e) => {
-                e.target.style.display = 'none';
-                e.target.nextSibling.style.display = 'flex';
+                e.target.style.display = "none";
+                e.target.nextSibling.style.display = "flex";
               }}
             />
           ) : null}
-          <div 
-            className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-xl ${user?.profileImage ? 'hidden' : 'flex'}`}
+          <div
+            className={`absolute inset-0 bg-black flex items-center justify-center font-bold text-white text-xl ${
+              user?.profileImage ? "hidden" : "flex"
+            }`}
           >
             {user?.fullName?.charAt(0)?.toUpperCase() || "?"}
           </div>
@@ -135,7 +152,9 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
             {user?.fullName || "User"}
           </p>
           <p className="text-sm text-gray-300">{user?.email}</p>
-          <p className="text-xs text-purple-300 font-medium">{user?.role || "User"}</p>
+          <p className="text-xs text-purple-300 font-medium">
+            {user?.role || "User"}
+          </p>
         </div>
       </div>
       <button
@@ -306,19 +325,26 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
       >
         <header className="absolute top-1/2 w-full -translate-y-1/2">
           <div className="flex items-center justify-between">
-            <Link to="/" className="flex pl-8 items-center justify-center gap-3">
+            <Link
+              to="/"
+              className="flex pl-8 items-center justify-center gap-3"
+            >
               <h1 className="ml-8 text-white font-bold hidden md:flex md:text-2xl">
                 SAMYAK
               </h1>
-              <img className="w-16 h-auto" src="/img/samyak.svg" alt="Samyak Logo" />
-              <img className="w-20 h-auto" src="/src/assets/kl.png" alt="KL Logo" />
+              <img
+                className="w-16 h-auto"
+                src="/img/samyak.svg"
+                alt="Samyak Logo"
+              />
+              <img className="w-20 h-auto" src={klLogo} alt="KL Logo" />
             </Link>
             <nav className="flex size-full items-center justify-center p-4 text-2xl font-bold">
               <div className="flex h-full items-center">
                 <div
                   ref={linksContainerRef}
                   className={clsx({
-                    "hidden": useMobileNav,
+                    hidden: useMobileNav,
                     "md:block": !useMobileNav,
                   })}
                 >
@@ -374,11 +400,8 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
               <button
                 onClick={() => setIsOpen(!isOpen)}
                 className={clsx(
-                  "relative z-50 flex h-10 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-white transition-all duration-300 hover:bg-black/50 focus:outline-none",
-                  {
-                    "lg:hidden": !useMobileNav,
-                    "lg:flex": useMobileNav,
-                  }
+                  "relative z-50 h-10 w-12 items-center justify-center rounded-lg border border-white/10 bg-black/30 text-white transition-all duration-300 hover:bg-black/50 focus:outline-none",
+                  useMobileNav ? "flex" : "hidden"
                 )}
               >
                 <div className="relative flex h-4 w-5 flex-col justify-between">
@@ -406,7 +429,7 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
 
       <div
         className={clsx(
-          "fixed inset-0 right-0 top-0 z-40 h-full w-full transform backdrop-blur-xl transition-all duration-500 ease-in-out lg:hidden",
+          "fixed inset-0 right-0 top-0 z-40 h-full w-full transform backdrop-blur-xl transition-all duration-500 ease-in-out",
           {
             "translate-x-0 opacity-100": isOpen,
             "translate-x-full opacity-0": !isOpen,
@@ -415,7 +438,7 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
         )}
       >
         <div className="flex h-full w-full flex-col items-center justify-between p-8 pt-24">
-          <div className="flex w-full flex-col gap-4">
+          <div className="flex w-full flex-col gap-3">
             {extendedLinks.map((link, index) => (
               <NavLink
                 key={link.title}
