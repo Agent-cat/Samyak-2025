@@ -2,17 +2,24 @@ import nodemailer from 'nodemailer';
 import { Buffer } from 'buffer';
 import dotenv from "dotenv"
 import PDFDocument from 'pdfkit';
+import fs from 'fs';
+import path from 'path';
+import { PDFDocument as PDFLib, rgb, StandardFonts } from 'pdf-lib';
 dotenv.config();
 
-console.log(process.env.EMAIL_USER,process.env.EMAIL_PASSWORD)
+
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-   
-    auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-    },
-    
+    host: 'smtp.office365.com',    
+        port: 587,
+        secure: false,
+auth: {
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASSWORD
+},
+    tls:{
+    rejectUnauthorized:false
+    }
+
 });
 
 export const sendOTPEmail = async (email, otp) => {
@@ -177,4 +184,153 @@ export const sendKLUApprovalEmail = async (email, password) => {
         console.error('Error in sendKLUApprovalEmail:', error);
         return false;
     }
+};
+
+export const generateCertificatePdfBuffer = async ({
+  fullName,
+  college,
+  collegeId,
+  eventTitle,
+  templateImagePath,
+}) => {
+  // Preferred: draw on provided Backend/certificate.pdf template using pdf-lib
+  try {
+    // IMPORTANT: server runs from Backend/, so the template is at ./certificate.pdf
+    const templatePath = path.resolve(process.cwd(), 'certificate.pdf');
+    const templateBytes = fs.readFileSync(templatePath);
+    const pdfDoc = await PDFLib.load(templateBytes);
+    const page = pdfDoc.getPages()[0];
+
+    const { width, height } = page.getSize();
+    // Use Helvetica font variants
+    const helv = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const helvBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+
+    // Helper to center text at (y), with font and size
+    const drawCentered = (text, y, size = 18, bold = false, color = rgb(0, 0, 0)) => {
+      const font = bold ? helvBold : helv;
+      const textWidth = font.widthOfTextAtSize(text, size);
+      const x = (width - textWidth) / 2;
+      page.drawText(text, { x, y, size, font, color });
+    };
+
+    // Helper config reader
+    const num = (key, def) => {
+      const raw = process.env[key];
+      const n = raw !== undefined ? Number(raw) : NaN;
+      return Number.isFinite(n) ? n : def;
+    };
+    const str = (key, def) => (process.env[key] ?? def);
+
+    // EASY POSITION CONTROLS (y is from bottom; +y moves up)
+    // Name
+    const NAME_Y = num('CERT_NAME_Y', height - 405);
+    const NAME_SIZE = num('CERT_NAME_SIZE', 20);
+    const NAME_X_OFFSET = num('CERT_NAME_X_OFFSET', -170); // shifts from centered X (negative left, positive right)
+    // ID
+    const ID_Y = num('CERT_ID_Y', height - 405);
+    const ID_SIZE = num('CERT_ID_SIZE', 16);
+    const ID_X = process.env.CERT_ID_X !== undefined ? num('CERT_ID_X', (width - 160)) : null; // absolute X (takes priority)
+    const ID_RIGHT_MARGIN = num('CERT_ID_RIGHT_MARGIN', 160); // if CERT_ID_X not set, align from right edge
+    // College
+    const COLLEGE_Y = num('CERT_COLLEGE_Y', height - 445);
+    const COLLEGE_SIZE = num('CERT_COLLEGE_SIZE', 18);
+    const COLLEGE_X_OFFSET = num('CERT_COLLEGE_X_OFFSET', -300);
+    // Event Title
+    const EVENT_Y = num('CERT_EVENT_Y', height - 485);
+    const EVENT_SIZE = num('CERT_EVENT_SIZE', 20);
+    const EVENT_X_OFFSET = num('CERT_EVENT_X_OFFSET', -420);
+
+    // Render Name (centered + optional X offset)
+    if (fullName) {
+      const text = String(fullName);
+      const font = helvBold;
+      const size = NAME_SIZE;
+      const textWidth = font.widthOfTextAtSize(text, size);
+      const cx = (width - textWidth) / 2;
+      const x = cx + NAME_X_OFFSET;
+      page.drawText(text, { x, y: NAME_Y, size, font, color: rgb(0, 0, 0) });
+    }
+
+    // Render ID (absolute X if provided, else right-aligned with margin)
+    if (collegeId) {
+      const text = String(collegeId);
+      const font = helvBold;
+      const size = ID_SIZE;
+      const textWidth = font.widthOfTextAtSize(text, size);
+      const x = ID_X !== null ? ID_X : (width - textWidth - ID_RIGHT_MARGIN);
+      page.drawText(text, { x, y: ID_Y, size, font, color: rgb(0, 0, 0) });
+    }
+
+    // College (centered + offset)
+    if (college) {
+      const text = String(college);
+      const font = helvBold;
+      const size = COLLEGE_SIZE;
+      const textWidth = font.widthOfTextAtSize(text, size);
+      const cx = (width - textWidth) / 2;
+      const x = cx + COLLEGE_X_OFFSET;
+      page.drawText(text, { x, y: COLLEGE_Y, size, font, color: rgb(0, 0, 0) });
+    }
+
+    // Event title (centered + offset)
+    if (eventTitle) {
+      const text = String(eventTitle);
+      const font = helvBold;
+      const size = EVENT_SIZE;
+      const textWidth = font.widthOfTextAtSize(text, size);
+      const cx = (width - textWidth) / 2;
+      const x = cx + EVENT_X_OFFSET;
+      page.drawText(text, { x, y: EVENT_Y, size, font, color: rgb(0, 0, 0) });
+    }
+
+    const out = await pdfDoc.save();
+    return Buffer.from(out);
+  } catch (err) {
+    // Fallback to previous dynamic rendering if template missing
+    return await new Promise((resolve, reject) => {
+      try {
+        const doc = new PDFDocument({ size: 'A4', layout: 'landscape', margin: 0 });
+        const chunks = [];
+        doc.on('data', (c) => chunks.push(c));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        const pageWidth = doc.page.width;
+        const pageHeight = doc.page.height;
+        doc.rect(0, 0, pageWidth, pageHeight).fill('#ffffff');
+        doc.fill('#000').font('Helvetica-Bold').fontSize(26).text('CERTIFICATE OF PARTICIPATION', 0, 120, { width: pageWidth, align: 'center' });
+        const lineYStart = 210;
+        doc.font('Helvetica').fontSize(14).fill('#111111');
+        doc.text(`This is to certify that  Mr./Ms. ${fullName || ''} , bearing ID No. ${collegeId || ''} ,`, 80, lineYStart, { width: pageWidth - 160, align: 'center' });
+        doc.text(`from ${college || ''} has participated in Technical / Non-Technical event:`, 80, lineYStart + 28, { width: pageWidth - 160, align: 'center' });
+        doc.font('Helvetica-Bold').text(`${eventTitle || ''}`, 80, lineYStart + 54, { width: pageWidth - 160, align: 'center' });
+        doc.end();
+      } catch (e2) { reject(e2); }
+    });
+  }
+};
+
+export const sendCertificateEmail = async ({ toEmail, fullName, college, collegeId, eventTitle, templateImagePath }) => {
+  try {
+    const pdfBuffer = await generateCertificatePdfBuffer({ fullName, college, collegeId, eventTitle, templateImagePath });
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: toEmail,
+      subject: `Certificate of Participation - ${eventTitle || 'SAMYAK 2025'}`,
+      html: `<p>Dear ${fullName || 'Participant'},</p>
+             <p>Thank you for your participation in SAMYAK 2025. Please find attached your Certificate of Participation.</p>
+             <p>Regards,<br/>SAMYAK Team</p>`,
+      attachments: [
+        {
+          filename: `Certificate-${(eventTitle || 'SAMYAK').toString().replace(/[^a-z0-9_-]/gi, '_')}-${(collegeId || 'participant').toString().replace(/[^a-z0-9_-]/gi, '_')}.pdf`,
+          content: pdfBuffer,
+          contentType: 'application/pdf',
+        },
+      ],
+    };
+    await transporter.sendMail(mailOptions);
+    return true;
+  } catch (err) {
+    console.error('sendCertificateEmail error:', err);
+    return false;
+  }
 };

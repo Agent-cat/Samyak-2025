@@ -111,7 +111,41 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
               </span>
             </p>
           </div>
-          <div className="px-4 py-3">
+          <div className="px-4 py-3 space-y-2">
+            <NavLink
+              to="/my-profile"
+              onClick={() => setIsProfileOpen(false)}
+              className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 py-2.5 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
+            >
+              <span>My Profile</span>
+            </NavLink>
+            {user?.role === "manager" && (
+              <NavLink
+                to="/manager-attendance"
+                onClick={() => setIsProfileOpen(false)}
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 py-2.5 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
+              >
+                <span>Take Attendance</span>
+              </NavLink>
+            )}
+            {user?.role === "admin" && (
+              <div className="grid grid-cols-2 gap-2">
+                <NavLink
+                  to="/attendance-assign"
+                  onClick={() => setIsProfileOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white/10 py-2 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
+                >
+                  Assign
+                </NavLink>
+                <NavLink
+                  to="/manager-attendance"
+                  onClick={() => setIsProfileOpen(false)}
+                  className="flex items-center justify-center gap-2 rounded-lg bg-white/10 py-2 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
+                >
+                  Attendance
+                </NavLink>
+              </div>
+            )}
             <button
               onClick={handleLogout}
               className="flex w-full items-center justify-center gap-2 rounded-lg bg-black py-2.5 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
@@ -156,6 +190,33 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
             {user?.role || "User"}
           </p>
         </div>
+      </div>
+      <div className="grid grid-cols-1 gap-2 mb-4">
+        <NavLink
+          to="/my-profile"
+          onClick={() => setIsOpen(false)}
+          className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 py-3 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
+        >
+          My Profile
+        </NavLink>
+        {user?.role === "manager" && (
+          <NavLink
+            to="/manager-attendance"
+            onClick={() => setIsOpen(false)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 py-3 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
+          >
+            Take Attendance
+          </NavLink>
+        )}
+        {user?.role === "admin" && (
+          <NavLink
+            to="/attendance-assign"
+            onClick={() => setIsOpen(false)}
+            className="flex w-full items-center justify-center gap-2 rounded-lg bg-white/10 py-3 font-medium text-white transition-all duration-300 hover:bg-white hover:text-black"
+          >
+            Assign Managers
+          </NavLink>
+        )}
       </div>
       <button
         onClick={handleLogout}

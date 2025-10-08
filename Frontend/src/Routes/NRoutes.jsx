@@ -17,6 +17,9 @@ import PleaseLogin from "../Pages/PleaseLogin";
 import ForgotPassword from "../Components/ForgotPassword";
 import UserDetails from "../Pages/UserDetails";
 import Team from "../Pages/Team";
+import AttendanceAssign from "../Pages/AttendanceAssign";
+import ManagerAttendance from "../Pages/ManagerAttendance";
+import MyProfile from "../Pages/MyProfile";
 
 const NRoutes = () => {
   const user = getUser();
@@ -24,6 +27,7 @@ const NRoutes = () => {
   const serverRole = user?.role; // kept for now; Navbar will refresh from /me
   const isPrivileged = ["admin", "hod", "manager"].includes(serverRole);
   const isAdmin = serverRole === "admin";
+  const isManager = serverRole === "manager";
 
   return (
     <Routes>
@@ -68,6 +72,22 @@ const NRoutes = () => {
         }
       />
       <Route
+        path="/attendance-assign"
+        element={
+          <ProtectedRoute>
+            {isAdmin ? <AttendanceAssign /> : <Navigate to="/" />}
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/manager-attendance"
+        element={
+          <ProtectedRoute>
+            {isManager || isAdmin ? <ManagerAttendance /> : <Navigate to="/" />}
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/events-panel"
         element={
           <ProtectedRoute>
@@ -81,6 +101,14 @@ const NRoutes = () => {
         element={
           <ProtectedRoute>
             {isAdmin ? <UserDetails /> : <Navigate to="/" />}
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/my-profile"
+        element={
+          <ProtectedRoute>
+            <MyProfile />
           </ProtectedRoute>
         }
       />
