@@ -9,8 +9,12 @@ const CACHE_DURATION = 300;
 
 const clearEventsCache = async () => {
   try {
-    await redisClient.del(CACHE_KEY);
-    console.log("cleared");
+    // Clear all cache keys related to events
+    const keys = await redisClient.keys(`${CACHE_KEY}*`);
+    if (keys.length > 0) {
+      await redisClient.del(...keys);
+      console.log(`Cleared ${keys.length} event cache keys`);
+    }
   } catch (error) {
     console.error("Error clearing events cache:", error);
   }
@@ -29,15 +33,80 @@ export const createEvent = async (req, res) => {
 
 export const getAllEvents = async (req, res) => {
   try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 10;
+    const skip = (page - 1) * limit;
     
-    const cachedEvents = await redisClient.get(CACHE_KEY);
+    // Create cache key with pagination
+    const paginatedCacheKey = `${CACHE_KEY}_page_${page}_limit_${limit}`;
+    
+    // Check for cached paginated results
+    const cachedEvents = await redisClient.get(paginatedCacheKey);
     if (cachedEvents) {
-      console.log("Serving events from Redis cache.");
+      console.log(`Serving paginated events from Redis cache (page ${page}).`);
       return res.status(200).json(JSON.parse(cachedEvents));
     }
 
+    console.log(`Fetching paginated events from database (page ${page}, limit ${limit}).`);
     
-    console.log("Fetching events from database.");
+    // Get total count for pagination info
+    const totalCategories = await Event.countDocuments();
+    
+    // Fetch paginated events with optimized query
+    const events = await Event.find()
+      .skip(skip)
+      .limit(limit)
+      .populate([
+        {
+          path: "Events.registeredStudents",
+          select: "fullName email college collegeId",
+          options: { limit: 10 } // Limit populated students for performance
+        },
+        {
+          path: "subcategories.Events.registeredStudents",
+          select: "fullName email college collegeId",
+          options: { limit: 10 } // Limit populated students for performance
+        }
+      ])
+      .lean() // Use lean() for better performance
+      .sort({ categoryName: 1 }); // Sort by category name for consistent ordering
+
+    // Calculate pagination info
+    const totalPages = Math.ceil(totalCategories / limit);
+    const hasNextPage = page < totalPages;
+    const hasPrevPage = page > 1;
+
+    const response = {
+      events,
+      pagination: {
+        currentPage: page,
+        totalPages,
+        totalCategories,
+        hasNextPage,
+        hasPrevPage,
+        limit
+      }
+    };
+
+    // Cache paginated results
+    await redisClient.setex(paginatedCacheKey, CACHE_DURATION, JSON.stringify(response));
+
+    res.status(200).json(response);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Get all events without pagination (for admin use)
+export const getAllEventsAdmin = async (req, res) => {
+  try {
+    const cachedEvents = await redisClient.get(CACHE_KEY);
+    if (cachedEvents) {
+      console.log("Serving all events from Redis cache.");
+      return res.status(200).json(JSON.parse(cachedEvents));
+    }
+
+    console.log("Fetching all events from database.");
     const events = await Event.find().populate([
       {
         path: "Events.registeredStudents",
@@ -49,9 +118,7 @@ export const getAllEvents = async (req, res) => {
       }
     ]);
 
-    
     await redisClient.setex(CACHE_KEY, CACHE_DURATION, JSON.stringify(events));
-
     res.status(200).json(events);
   } catch (error) {
     res.status(500).json({ message: error.message });

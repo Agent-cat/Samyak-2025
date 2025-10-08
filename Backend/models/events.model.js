@@ -138,4 +138,11 @@ const eventSchema = new mongoose.Schema({
   ],
 });
 
+// Add indexes for better query performance
+eventSchema.index({ categoryName: 1 });
+eventSchema.index({ "Events.registeredStudents": 1 });
+eventSchema.index({ "subcategories.Events.registeredStudents": 1 });
+eventSchema.index({ "Events.eventType": 1 });
+eventSchema.index({ "subcategories.Events.eventType": 1 });
+
 export default mongoose.model("Event", eventSchema);
