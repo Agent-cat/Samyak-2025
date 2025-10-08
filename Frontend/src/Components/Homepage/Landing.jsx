@@ -49,9 +49,9 @@ const Landing = () => {
 
   const [showGuests, setShowGuests] = useState(false);
   const chiefGuests = [
+    { id: "cg-2", name: "Dj Holy C", role: "Dj,Producer", image: "/cg3.webp",title:"Dj" },
     { id: "cg-1", name: "(Dr) Srinivas Pindi ", role: "Vice President Human Resources & TA @ Phenom | Human Resource Planning", image: "/cg1.jpeg" },
-    { id: "cg-2", name: "To Be Announced", role: "...", image: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fcdn1.vectorstock.com%2Fi%2F1000x1000%2F91%2F85%2Fto-be-announced-rubber-stamp-vector-13489185.jpg&f=1&nofb=1&ipt=6694b7976bfda3f60d9e7973b119dbaaa7f4f8f5505d7eb496d2609b3fbfa03b" },
-    { id: "cg-3", name: "To Be Announced", role: "...", image: "https://external-content.duckduckgo.com/iu/?u=https%3A%2F%2Fcdn1.vectorstock.com%2Fi%2F1000x1000%2F91%2F85%2Fto-be-announced-rubber-stamp-vector-13489185.jpg&f=1&nofb=1&ipt=6694b7976bfda3f60d9e7973b119dbaaa7f4f8f5505d7eb496d2609b3fbfa03b" },
+    { id: "cg-3", name: "Jammers", role: "Music band", image: "/cg4.jpg",title:"Proshow (Band)" },
   ];
 
   const totalVideos = 1;
