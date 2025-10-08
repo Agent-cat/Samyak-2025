@@ -6,6 +6,7 @@ import userRoutes from "./routes/user.routes.js";
 import connectDB from "./database/db.js";
 import adminRoutes from "./routes/admin.routes.js";
 import eventRoutes from "./routes/event.routes.js";
+import attendanceRoutes from "./routes/attendance.routes.js";
 const app = express();
 
 app.use(cors({
@@ -20,6 +21,7 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use("/api/users", userRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/events", eventRoutes);
+app.use("/api/attendance", attendanceRoutes);
 app.use("/uploads", express.static("uploads"));
 
 
