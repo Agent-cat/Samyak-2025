@@ -536,6 +536,8 @@ const AdminPanel = () => {
   const [xlsxFile, setXlsxFile] = useState(null);
   const [bulkUploading, setBulkUploading] = useState(false);
   const [stats, setStats] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredRegistrations, setFilteredRegistrations] = useState([]);
 
   const closeEventModal = useCallback(() => {
     setShowEventModal(false);
@@ -568,7 +570,26 @@ const AdminPanel = () => {
     } else if (view === "dashboard") {
       fetchStats();
     }
-  }, [filter, view]);
+  }, [filter, view, includeKL]);
+
+  // Filter registrations based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredRegistrations(registrations);
+    } else {
+      const filtered = registrations.filter((user) => {
+        const searchLower = searchTerm.toLowerCase();
+        return (
+          user.fullName?.toLowerCase().includes(searchLower) ||
+          user.email?.toLowerCase().includes(searchLower) ||
+          user.college?.toLowerCase().includes(searchLower) ||
+          user.collegeId?.toLowerCase().includes(searchLower) ||
+          user.paymentId?.toLowerCase().includes(searchLower)
+        );
+      });
+      setFilteredRegistrations(filtered);
+    }
+  }, [searchTerm, registrations]);
 
   const fetchStats = async () => {
     try {
@@ -1256,49 +1277,87 @@ const AdminPanel = () => {
         )}
 
         {view === "registrations" && (
-          <div className="flex flex-wrap gap-3 sm:gap-4 mb-6 items-center">
-            <button
-              onClick={() => setFilter("pending")}
-              className={`px-4 py-2 rounded-lg ${
-                filter === "pending"
-                  ? "bg-yellow-500 text-white"
-                  : "bg-gray-700 text-gray-300 hover:bg-yellow-500"
-              }`}
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => setFilter("approved")}
-              className={`px-4 py-2 rounded-lg ${
-                filter === "approved"
-                  ? "bg-green-500 text-white"
-                  : "bg-gray-700 text-gray-300 hover:bg-green-500"
-              }`}
-            >
-              Approved
-            </button>
-            <button
-              onClick={() => setFilter("rejected")}
-              className={`px-4 py-2 rounded-lg ${
-                filter === "rejected"
-                  ? "bg-red-500 text-white"
-                  : "bg-gray-700 text-gray-300 hover:bg-red-500"
-              }`}
-            >
-              Rejected
-            </button>
-            <button
-              onClick={() => exportRegistrationsToExcel(filter)}
-              className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200"
-            >
-              Export to Excel
-            </button>
+          <div className="space-y-4 mb-6">
+            {/* Search Bar */}
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+              <div className="relative flex-1 max-w-md">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                  <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                  </svg>
+                </div>
+                <input
+                  type="text"
+                  placeholder="Search by name, email, college, ID..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2.5 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-white"
+                  >
+                    <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+              
+              {/* Search Results Count */}
+              {searchTerm && (
+                <div className="text-sm text-gray-400">
+                  {filteredRegistrations.length} result{filteredRegistrations.length !== 1 ? 's' : ''} found
+                </div>
+              )}
+            </div>
+
+            {/* Filter Buttons */}
+            <div className="flex flex-wrap gap-3 sm:gap-4 items-center">
+              <button
+                onClick={() => setFilter("pending")}
+                className={`px-4 py-2 rounded-lg ${
+                  filter === "pending"
+                    ? "bg-yellow-500 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-yellow-500"
+                }`}
+              >
+                Pending
+              </button>
+              <button
+                onClick={() => setFilter("approved")}
+                className={`px-4 py-2 rounded-lg ${
+                  filter === "approved"
+                    ? "bg-green-500 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-green-500"
+                }`}
+              >
+                Approved
+              </button>
+              <button
+                onClick={() => setFilter("rejected")}
+                className={`px-4 py-2 rounded-lg ${
+                  filter === "rejected"
+                    ? "bg-red-500 text-white"
+                    : "bg-gray-700 text-gray-300 hover:bg-red-500"
+                }`}
+              >
+                Rejected
+              </button>
+              <button
+                onClick={() => exportRegistrationsToExcel(filter)}
+                className="px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-all duration-200"
+              >
+                Export to Excel
+              </button>
+            </div>
           </div>
         )}
 
         {view === "registrations" ? (
           <div className="grid gap-6">
-            {registrations.map((user) => (
+            {filteredRegistrations.map((user) => (
               <div
                 key={user._id}
                 className="bg-gray-800/50 backdrop-blur-sm rounded-xl p-6 shadow-xl hover:shadow-2xl transition-all duration-300 border border-purple-700"
@@ -1422,11 +1481,22 @@ const AdminPanel = () => {
               </div>
             ))}
 
-            {registrations.length === 0 && (
+            {filteredRegistrations.length === 0 && (
               <div className="text-center py-12">
                 <p className="text-purple-300 text-lg">
-                  No registrations found for {filter} status
+                  {searchTerm 
+                    ? `No registrations found matching "${searchTerm}"`
+                    : `No registrations found for ${filter} status`
+                  }
                 </p>
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="mt-4 px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors"
+                  >
+                    Clear Search
+                  </button>
+                )}
               </div>
             )}
           </div>

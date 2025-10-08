@@ -240,15 +240,18 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
     window.addEventListener("storage", handleStorageChange);
     const interval = setInterval(() => {
       const currentUser = getUser();
-      if (JSON.stringify(currentUser) !== JSON.stringify(user)) {
-        setUser(currentUser);
-      }
+      setUser(prevUser => {
+        if (JSON.stringify(currentUser) !== JSON.stringify(prevUser)) {
+          return currentUser;
+        }
+        return prevUser;
+      });
     }, 500);
     return () => {
       window.removeEventListener("storage", handleStorageChange);
       clearInterval(interval);
     };
-  }, [user]);
+  }, []);
 
   // Keep user profile fresh (including paymentStatus and role) from secure /me
   useEffect(() => {
@@ -260,8 +263,9 @@ const Navbar = ({ isAudioPlaying, setIsAudioPlaying, audioElementRef }) => {
         });
         if (!res.ok) return;
         const latest = await res.json();
-        const merged = { ...user, ...latest };
-        if (JSON.stringify(merged) !== JSON.stringify(user)) {
+        const currentUser = getUser();
+        const merged = { ...currentUser, ...latest };
+        if (JSON.stringify(merged) !== JSON.stringify(currentUser)) {
           persistUser(merged);
           setUser(merged);
         }

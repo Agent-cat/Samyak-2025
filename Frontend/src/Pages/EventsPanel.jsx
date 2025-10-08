@@ -51,7 +51,8 @@ const EventsPanel = () => {
 
   const fetchEvents = useCallback(async () => {
     try {
-      const response = await fetch(`${url}/api/events`, {
+      // Use admin endpoint to get all events for admin panel
+      const response = await fetch(`${url}/api/events/admin/all`, {
         headers: { Authorization: `Bearer ${localStorage.getItem("token")}` },
       });
       if (!response.ok) throw new Error("Failed to fetch events");

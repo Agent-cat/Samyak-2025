@@ -6,6 +6,7 @@ import fs from "fs";
 import {
   createEvent,
   getAllEvents,
+  getAllEventsAdmin,
   getEventById,
   updateEvent,
   deleteEvent,
@@ -64,6 +65,7 @@ router.post("/", createEvent);
 
 
 router.get("/", getAllEvents);
+router.get("/admin/all", getAllEventsAdmin);
 
 
 router.get("/:id", getEventById);

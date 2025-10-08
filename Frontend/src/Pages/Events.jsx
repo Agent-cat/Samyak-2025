@@ -56,6 +56,38 @@ const ParticipantMeter = ({ current, limit }) => {
   );
 };
 
+const EventSkeleton = () => (
+  <div className="bg-[#131315] rounded-2xl p-4 sm:p-6 w-full border border-white/[0.1] animate-pulse">
+    <div className="flex justify-between items-center mb-4">
+      <div className="flex items-center gap-3">
+        <div className="h-6 bg-gray-700 rounded w-48"></div>
+        <div className="h-5 bg-gray-700 rounded w-20"></div>
+      </div>
+      <div className="h-6 w-6 bg-gray-700 rounded"></div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="h-48 bg-gray-700 rounded-lg"></div>
+      <div className="md:col-span-2 space-y-4">
+        <div className="space-y-3">
+          <div className="h-4 bg-gray-700 rounded w-full"></div>
+          <div className="h-4 bg-gray-700 rounded w-3/4"></div>
+          <div className="h-4 bg-gray-700 rounded w-1/2"></div>
+        </div>
+        <div className="flex justify-between items-center pt-2">
+          <div className="h-4 bg-gray-700 rounded w-32"></div>
+          <div className="h-8 bg-gray-700 rounded w-24"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+);
+
+const LoadingSpinner = () => (
+  <div className="flex justify-center items-center py-8">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-cyan-400"></div>
+  </div>
+);
+
 const Events = () => {
   const url = import.meta.env.VITE_API_URL;
   const [events, setEvents] = useState([]);
@@ -75,9 +107,21 @@ const Events = () => {
   });
   const [apiError, setApiError] = useState(null);
   const [formError, setFormError] = useState(null);
+  
+  // Pagination states
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
+  
+  // All categories for filters (separate from paginated events)
+  const [allCategories, setAllCategories] = useState([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState(false);
 
   const container = useRef();
   const popupsRef = useRef(null);
+  const loadMoreRef = useRef(null);
 
   useEffect(() => {
     document.body.style.overflow =
@@ -87,19 +131,89 @@ const Events = () => {
     };
   }, [showRegisterPopup, showSuccessPopup.show]);
 
+  const fetchEvents = async (page = 1, append = false) => {
+    try {
+      if (append) {
+        setIsLoadingMore(true);
+      } else {
+        setIsLoading(true);
+        setApiError(null);
+      }
+
+      const response = await axios.get(`${url}/api/events`, {
+        params: { page, limit: 5 } // Load 5 categories per page for faster loading
+      });
+
+      const { events: newEvents, pagination } = response.data;
+      
+      if (append) {
+        setEvents(prev => [...prev, ...newEvents]);
+        setFilteredEvents(prev => [...prev, ...newEvents]);
+      } else {
+        setEvents(newEvents);
+        setFilteredEvents(newEvents);
+      }
+      
+      setCurrentPage(pagination.currentPage);
+      setTotalPages(pagination.totalPages);
+      setHasMore(pagination.hasNextPage);
+    } catch (error) {
+      console.error("Error fetching events:", error);
+      setApiError("Failed to load events. Please try again later.");
+    } finally {
+      setIsLoading(false);
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Fetch all categories for filters (separate from paginated events)
+  const fetchAllCategories = async () => {
+    try {
+      setIsLoadingCategories(true);
+      const response = await axios.get(`${url}/api/events/admin/all`);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching all categories:", error);
+      return [];
+    } finally {
+      setIsLoadingCategories(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchEvents = async () => {
-      try {
-        const response = await axios.get(`${url}/api/events`);
-        setEvents(response.data);
-        setFilteredEvents(response.data);
-      } catch (error) {
-        console.error("Error fetching events:", error);
-        setApiError("Failed to load events. Please try again later.");
+    const initializeData = async () => {
+      // Fetch all categories for filters
+      const allCats = await fetchAllCategories();
+      setAllCategories(allCats);
+      
+      // Fetch paginated events
+      await fetchEvents(1);
+    };
+    
+    initializeData();
+  }, [url]);
+
+  // Infinite scroll effect
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isLoadingMore) {
+          handleLoadMore();
+        }
+      },
+      { threshold: 0.1 }
+    );
+
+    if (loadMoreRef.current) {
+      observer.observe(loadMoreRef.current);
+    }
+
+    return () => {
+      if (loadMoreRef.current) {
+        observer.unobserve(loadMoreRef.current);
       }
     };
-    fetchEvents();
-  }, [url]);
+  }, [hasMore, isLoadingMore]);
 
   useEffect(() => {
     let filtered = events;
@@ -230,6 +344,32 @@ const Events = () => {
     }
   };
 
+  const handleLoadMore = () => {
+    if (hasMore && !isLoadingMore) {
+      fetchEvents(currentPage + 1, true);
+    }
+  };
+
+  // Handle category filter change
+  const handleCategoryChange = async (categoryName) => {
+    setSelectedCategory(categoryName);
+    setSelectedSubcategory("All");
+    setSearchTerm("");
+    
+    if (categoryName === "All") {
+      // Reset to show all events
+      setEvents([]);
+      setFilteredEvents([]);
+      setCurrentPage(1);
+      await fetchEvents(1);
+    } else {
+      // Filter events by category
+      const filteredCats = allCategories.filter(cat => cat.categoryName === categoryName);
+      setEvents(filteredCats);
+      setFilteredEvents(filteredCats);
+    }
+  };
+
   const handleRegistrationSubmit = async () => {
     if (!acceptedTerms) {
       setFormError("You must accept the terms and conditions to register.");
@@ -268,8 +408,8 @@ const Events = () => {
         show: true,
         message: "You have successfully registered for the event!",
       });
-      const eventsResponse = await axios.get(`${url}/api/events`);
-      setEvents(eventsResponse.data);
+      // Refresh current page instead of all events
+      fetchEvents(currentPage);
     } catch (err) {
       setFormError(err.message);
     }
@@ -397,19 +537,19 @@ const Events = () => {
           <div className="relative flex-1">
             <select
               value={selectedCategory}
-              onChange={(e) => {
-                setSelectedCategory(e.target.value);
-                setSelectedSubcategory("All");
-                setSearchTerm("");
-              }}
+              onChange={(e) => handleCategoryChange(e.target.value)}
               className="w-full bg-[#131315] border border-white/[0.1] rounded-full py-3 pl-4 pr-10 text-white focus:outline-none focus:ring-2 focus:ring-cyan-500 transition-all duration-300 appearance-none"
             >
               <option value="All">All Categories</option>
-              {events.map((category) => (
-                <option key={category._id} value={category.categoryName}>
-                  {category.categoryName}
-                </option>
-              ))}
+              {isLoadingCategories ? (
+                <option disabled>Loading categories...</option>
+              ) : (
+                allCategories.map((category) => (
+                  <option key={category._id} value={category.categoryName}>
+                    {category.categoryName}
+                  </option>
+                ))
+              )}
             </select>
             <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-gray-400">
               <Icon path="M19.5 8.25l-7.5 7.5-7.5-7.5" />
@@ -426,7 +566,7 @@ const Events = () => {
             >
               <option value="All">All Subcategories</option>
               {selectedCategory !== "All" &&
-                events
+                allCategories
                   .find((cat) => cat.categoryName === selectedCategory)
                   ?.subcategories?.map((subcategory) => (
                     <option
@@ -462,7 +602,27 @@ const Events = () => {
       </div>
 
       <main className="max-w-4xl mx-auto px-4">
-        {apiError ? (
+        {isLoading ? (
+          <div className="space-y-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="animate-in">
+                <div className="mb-8">
+                  <div className="h-8 bg-gray-700 rounded w-48 animate-pulse"></div>
+                </div>
+                <div className="space-y-8">
+                  {[1, 2].map((j) => (
+                    <div key={j} className="relative flex items-start ml-4 sm:ml-8">
+                      <div className="absolute -left-8 -ml-[1.1rem] mt-3 z-10">
+                        <div className="w-3 h-3 bg-gray-700 rounded-full animate-pulse"></div>
+                      </div>
+                      <EventSkeleton />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : apiError ? (
           <div className="text-red-400 text-center p-8 bg-[#131315] rounded-lg">
             {apiError}
           </div>
@@ -549,6 +709,10 @@ const Events = () => {
                                           src={event.image}
                                           alt={event.title}
                                           className="w-full h-full object-cover"
+                                          loading="lazy"
+                                          onError={(e) => {
+                                            e.target.src = '/img/placeholder.jpg';
+                                          }}
                                         />
                                         <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                       </div>
@@ -714,6 +878,10 @@ const Events = () => {
                                                 src={event.image}
                                                 alt={event.title}
                                                 className="w-full h-full object-cover"
+                                                loading="lazy"
+                                                onError={(e) => {
+                                                  e.target.src = '/img/placeholder.jpg';
+                                                }}
                                               />
                                               <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent"></div>
                                             </div>
@@ -827,6 +995,26 @@ const Events = () => {
             <p className="text-gray-500 mt-2">
               No events or subcategories found. Try adjusting your search terms or filters.
             </p>
+          </div>
+        )}
+        
+        {/* Load More Section */}
+        {!isLoading && filteredEvents.length > 0 && (
+          <div className="mt-12 text-center" ref={loadMoreRef}>
+            {isLoadingMore ? (
+              <LoadingSpinner />
+            ) : hasMore ? (
+              <button
+                onClick={handleLoadMore}
+                className="bg-cyan-500 text-black px-8 py-3 rounded-full font-bold hover:bg-cyan-400 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-black"
+              >
+                Load More Events
+              </button>
+            ) : (
+              <div className="text-gray-400 text-sm">
+                You've reached the end of the events list
+              </div>
+            )}
           </div>
         )}
       </main>
