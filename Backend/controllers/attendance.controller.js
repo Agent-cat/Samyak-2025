@@ -2,7 +2,7 @@ import Event from "../models/events.model.js";
 import Attendance from "../models/attendance.model.js";
 import ManagerAssignment from "../models/managerAssignment.model.js";
 import User from "../models/user.model.js";
-import { sendCertificateEmail } from "../utils/emailService.js";
+import { enqueueCertificateEmail } from "../queue/emailQueue.js";
 
 const findEventRefs = async ({ categoryId, subcategoryId, eventId }) => {
   const category = await Event.findById(categoryId).lean();
@@ -166,18 +166,17 @@ export const submitAttendance = async (req, res) => {
       { upsert: true, new: true, setDefaultsOnInsert: true }
     );
 
-    // Fire-and-forget certificate emails in background
-    (async () => {
+    // Enqueue certificate emails to Redis queue (processed by worker)
+    ;(async () => {
       try {
-        // Lookup event title for email subject
-        const refs = await findEventRefs({ categoryId, subcategoryId, eventId });
-        const eventTitle = refs?.event?.title || "SAMYAK Event";
+        const refs2 = await findEventRefs({ categoryId, subcategoryId, eventId });
+        const eventTitle = refs2?.event?.title || "SAMYAK Event";
         const users = await User.find({ _id: { $in: sanitized.map((s) => s.user) } }).select('email fullName college collegeId').lean();
         const userById = new Map(users.map((u) => [String(u._id), u]));
         for (const e of sanitized) {
           const u = userById.get(String(e.user));
           if (!u || !u.email) continue;
-          await sendCertificateEmail({
+          await enqueueCertificateEmail({
             toEmail: u.email,
             fullName: u.fullName,
             college: u.college,
@@ -186,7 +185,7 @@ export const submitAttendance = async (req, res) => {
           });
         }
       } catch (err) {
-        console.error('Background certificate email error:', err);
+        console.error('Queueing certificate email error:', err);
       }
     })();
 

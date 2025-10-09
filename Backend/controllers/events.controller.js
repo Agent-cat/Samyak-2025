@@ -189,7 +189,7 @@ export const registerForEvent = async (req, res) => {
     if (user.paymentStatus !== "approved") {
       const isKLEmail = typeof user.email === "string" && user.email.toLowerCase().endsWith("@kluniversity.in");
       const msg = isKLEmail
-        ? "Please pay the event fee in ERP to complete your registration.If Paid Go to Samyak Helpdesk in C Lobby and R Lobby to update the payment status."
+        ? "Please pay the event fee in ERP to complete your registration."
         : "Your registration payment is pending approval.";
       return res.status(403).json({ message: msg });
     }

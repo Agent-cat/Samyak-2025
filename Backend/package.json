@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "nodemon index.js"
+    "dev": "nodemon index.js",
+    "worker:email": "node workers/emailWorker.js"
   },
   "keywords": [],
   "author": "",

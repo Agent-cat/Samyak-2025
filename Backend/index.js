@@ -1,3 +1,5 @@
+import cluster from 'cluster';
+import os from 'os';
 import express from "express";
 import cors from "cors";
 import dotenv from 'dotenv';
@@ -36,7 +38,7 @@ const startServer = async () => {
     await connectDB();
     const port = process.env.PORT || 5000;
     app.listen(port, '0.0.0.0', () => {
-      console.log(`Server running on port ${port}`);
+      console.log(`Worker ${process.pid} listening on port ${port}`);
     });
   } catch (error) {
     console.error('Failed to start server:', error);
@@ -44,6 +46,20 @@ const startServer = async () => {
   }
 };
 
-startServer();
+const enableClustering = process.env.CLUSTER_ENABLED === 'true';
+const numWorkers = Number(process.env.WEB_CONCURRENCY) || os.cpus().length;
+
+if (enableClustering && cluster.isPrimary) {
+  console.log(`Primary ${process.pid} is running with ${numWorkers} workers`);
+  for (let i = 0; i < numWorkers; i += 1) {
+    cluster.fork();
+  }
+  cluster.on('exit', (worker) => {
+    console.warn(`Worker ${worker.process.pid} died. Restarting...`);
+    cluster.fork();
+  });
+} else {
+  startServer();
+}
 
 export default app;

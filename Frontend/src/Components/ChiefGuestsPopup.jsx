@@ -1,10 +1,4 @@
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 
 const clamp = (num, min, max) => Math.min(Math.max(num, min), max);
@@ -71,12 +65,12 @@ const ChiefGuestsPopup = ({
       opacity: 1,
       scale: 1,
       rotateY: 0,
-      transition: {
-        duration: 0.6,
+      transition: { 
+        duration: 0.6, 
         ease: [0.25, 0.46, 0.45, 0.94],
         type: "spring",
         stiffness: 100,
-        damping: 15,
+        damping: 15
       },
     },
     exit: (direction) => ({
@@ -85,9 +79,9 @@ const ChiefGuestsPopup = ({
       opacity: 0,
       scale: 0.8,
       rotateY: direction < 0 ? 45 : -45,
-      transition: {
-        duration: 0.4,
-        ease: [0.25, 0.46, 0.45, 0.94],
+      transition: { 
+        duration: 0.4, 
+        ease: [0.25, 0.46, 0.45, 0.94] 
       },
     }),
   };
@@ -99,29 +93,26 @@ const ChiefGuestsPopup = ({
 
   return (
     <AnimatePresence>
-      <motion.div
+      <motion.div 
         className="fixed inset-0 z-[200] flex items-center justify-center p-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
         transition={{ duration: 0.3 }}
       >
+
         {/* Carousel Container */}
         <div ref={containerRef} className="relative">
           <div className="relative h-[500px] md:h-[550px] overflow-visible flex items-center justify-center">
             {/* Left side card */}
             {total > 1 && (
-              <motion.div
+              <motion.div 
                 className="absolute -left-16 md:-left-56 w-[240px] h-[380px] md:w-[280px] md:h-[420px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl opacity-60 grayscale hover:opacity-80 transition-all duration-300"
                 initial={{ x: -50, opacity: 0 }}
                 animate={{ x: 0, opacity: 0.6 }}
                 transition={{ delay: 0.2 }}
               >
-                <img
-                  src={members[leftIndex]?.image}
-                  alt="left"
-                  className="w-full h-full object-cover"
-                />
+                <img src={members[leftIndex]?.image} alt="left" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 {/* Dynamic title */}
                 <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
@@ -168,17 +159,8 @@ const ChiefGuestsPopup = ({
                       animate={{ scale: 1, opacity: 1 }}
                       transition={{ delay: 0.4 }}
                     >
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        viewBox="0 0 24 24"
-                        fill="currentColor"
-                        className="w-5 h-5 text-white group-hover:text-red-400 transition-colors"
-                      >
-                        <path
-                          fillRule="evenodd"
-                          d="M6.225 4.811a1 1 0 011.414 0L12 9.172l4.361-4.361a1 1 0 111.414 1.414L13.414 10.586l4.361 4.361a1 1 0 01-1.414 1.414L12 12l-4.361 4.361a1 1 0 01-1.414-1.414l4.361-4.361-4.361-4.361a1 1 0 010-1.414z"
-                          clipRule="evenodd"
-                        />
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 text-white group-hover:text-red-400 transition-colors">
+                        <path fillRule="evenodd" d="M6.225 4.811a1 1 0 011.414 0L12 9.172l4.361-4.361a1 1 0 111.414 1.414L13.414 10.586l4.361 4.361a1 1 0 01-1.414 1.414L12 12l-4.361 4.361a1 1 0 01-1.414-1.414l4.361-4.361-4.361-4.361a1 1 0 010-1.414z" clipRule="evenodd" />
                       </svg>
                     </motion.button>
 
@@ -188,7 +170,7 @@ const ChiefGuestsPopup = ({
                       className="w-full h-full object-cover"
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent"></div>
-
+                    
                     {/* Content overlay */}
                     <div className="absolute inset-x-0 bottom-0 p-6">
                       <motion.div
@@ -202,6 +184,7 @@ const ChiefGuestsPopup = ({
                         <p className="text-lg text-white/80 font-medium">
                           {members[currentIndex]?.role}
                         </p>
+                        <div className="mt-3 w-12 h-1 bg-gradient-to-r from-purple-400 to-pink-400 rounded-full"></div>
                       </motion.div>
                     </div>
 
@@ -216,17 +199,13 @@ const ChiefGuestsPopup = ({
 
             {/* Right side card */}
             {total > 1 && (
-              <motion.div
+              <motion.div 
                 className="absolute -right-16 md:-right-56 w-[240px] h-[380px] md:w-[280px] md:h-[420px] rounded-2xl overflow-hidden border border-white/20 shadow-2xl opacity-60 grayscale hover:opacity-80 transition-all duration-300"
                 initial={{ x: 50, opacity: 0 }}
                 animate={{ x: 0, opacity: 0.6 }}
                 transition={{ delay: 0.2 }}
               >
-                <img
-                  src={members[rightIndex]?.image}
-                  alt="right"
-                  className="w-full h-full object-cover"
-                />
+                <img src={members[rightIndex]?.image} alt="right" className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
                 {/* Dynamic title */}
                 <div className="absolute top-4 left-1/2 transform -translate-x-1/2">
@@ -246,17 +225,8 @@ const ChiefGuestsPopup = ({
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-6 h-6 text-white group-hover:text-purple-300 transition-colors"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M15.78 5.22a.75.75 0 010 1.06L10.06 12l5.72 5.72a.75.75 0 11-1.06 1.06l-6.25-6.25a.75.75 0 010-1.06l6.25-6.25a.75.75 0 011.06 0z"
-                      clipRule="evenodd"
-                    />
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-white group-hover:text-purple-300 transition-colors">
+                    <path fillRule="evenodd" d="M15.78 5.22a.75.75 0 010 1.06L10.06 12l5.72 5.72a.75.75 0 11-1.06 1.06l-6.25-6.25a.75.75 0 010-1.06l6.25-6.25a.75.75 0 011.06 0z" clipRule="evenodd" />
                   </svg>
                 </motion.button>
                 <motion.button
@@ -265,17 +235,8 @@ const ChiefGuestsPopup = ({
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.95 }}
                 >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    viewBox="0 0 24 24"
-                    fill="currentColor"
-                    className="w-6 h-6 text-white group-hover:text-purple-300 transition-colors"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      d="M8.22 18.78a.75.75 0 010-1.06L13.94 12 8.22 6.28a.75.75 0 111.06-1.06l6.25 6.25a.75.75 0 010 1.06l-6.25 6.25a.75.75 0 01-1.06 0z"
-                      clipRule="evenodd"
-                    />
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6 text-white group-hover:text-purple-300 transition-colors">
+                    <path fillRule="evenodd" d="M8.22 18.78a.75.75 0 010-1.06L13.94 12 8.22 6.28a.75.75 0 111.06-1.06l6.25 6.25a.75.75 0 010 1.06l-6.25 6.25a.75.75 0 01-1.06 0z" clipRule="evenodd" />
                   </svg>
                 </motion.button>
               </>
@@ -290,8 +251,8 @@ const ChiefGuestsPopup = ({
                   key={idx}
                   onClick={() => setCurrentIndex(idx)}
                   className={`relative w-3 h-3 rounded-full transition-all duration-300 ${
-                    idx === currentIndex
-                      ? "bg-gradient-to-r from-purple-400 to-pink-400 shadow-lg shadow-purple-500/50"
+                    idx === currentIndex 
+                      ? "bg-gradient-to-r from-purple-400 to-pink-400 shadow-lg shadow-purple-500/50" 
                       : "bg-white/40 hover:bg-white/70 hover:scale-110"
                   }`}
                   aria-label={`Go to slide ${idx + 1}`}
@@ -302,11 +263,7 @@ const ChiefGuestsPopup = ({
                     <motion.div
                       className="absolute inset-0 rounded-full bg-gradient-to-r from-purple-400 to-pink-400"
                       layoutId="activeDot"
-                      transition={{
-                        type: "spring",
-                        stiffness: 500,
-                        damping: 30,
-                      }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
                     />
                   )}
                 </motion.button>
@@ -329,3 +286,5 @@ const ChiefGuestsPopup = ({
 };
 
 export default ChiefGuestsPopup;
+
+
